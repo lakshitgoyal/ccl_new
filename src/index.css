@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    @apply bg-slate-100 text-slate-900;
+  }
+}
+
+@keyframes ccl-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ccl-marquee {
+  display: flex;
+  width: max-content;
+  animation: ccl-marquee 22s linear infinite;
+}
+
+.animate-ccl-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #ccl-admit-card, #ccl-admit-card * {
+    visibility: visible;
+  }
+  #ccl-admit-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    border: 2px solid #1B3E8E !important;
+  }
+}

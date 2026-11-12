@@ -1,0 +1,6 @@
+{
+  "name": "Champion Cricket League",
+  "description": "Modern full-stack web platform for Champion Cricket League (CCL) - talent scouting, state-wise trials, player registrations, team rosters, and selection process.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
