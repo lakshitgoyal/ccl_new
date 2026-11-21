@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   ShieldCheck, 
@@ -8,9 +8,7 @@ import {
   Printer, 
   AlertCircle,
   Key,
-  Lock,
-  ExternalLink,
-  Check
+  CreditCard
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BallType, PlayerSpeciality, RegistrationFormData, RegistrationRecord } from '../types';
@@ -18,9 +16,9 @@ import { CCL_TRIAL_STATES, getCitiesForState, calculateRegistrationFee } from '.
 import { 
   sendCandidateDetailsToCompany, 
   sendRegistrationPendingEmail,
-  sendCandidateRegistrationDetailsEmail,
   sendEmailToCandidate, 
-  sendPaymentEmailToCompany
+  sendPaymentEmailToCompany,
+  getAgeCategoryLabel
 } from '../services/notificationService';
 import { 
   getStoredRazorpayKey, 
@@ -29,26 +27,53 @@ import {
 } from '../services/razorpayService';
 import { PaymentSuccessModal } from './PaymentSuccessModal';
 
+export interface ResumeRegistrationData {
+  registrationNumber: string;
+  name: string;
+  email: string;
+  phone: string;
+  age: number | string;
+  speciality: PlayerSpeciality | string;
+  ballType: BallType;
+  state: string;
+  city: string;
+}
+
 interface RegistrationModalProps {
   isOpen: boolean;
   initialBallType?: BallType;
   initialState?: string;
   initialCity?: string;
+  resumeRegistration?: ResumeRegistrationData | null;
   onClose: () => void;
   onSuccess?: (record: RegistrationRecord) => void;
 }
+
+const getNextLocalSequentialRegId = (): string => {
+  try {
+    const prev = parseInt(localStorage.getItem('ccl_reg_seq_counter') || '0', 10);
+    const next = (isNaN(prev) ? 0 : prev) + 1;
+    localStorage.setItem('ccl_reg_seq_counter', String(next));
+    return `CCL-26-${String(next).padStart(4, '0')}`;
+  } catch {
+    return 'CCL-26-0001';
+  }
+};
 
 export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   isOpen,
   initialBallType = 'Leather',
   initialState = '',
   initialCity = '',
+  resumeRegistration = null,
   onClose,
   onSuccess
 }) => {
   const [ballType, setBallType] = useState<BallType>(initialBallType);
-  const [step, setStep] = useState<'form' | 'key_needed' | 'receipt'>('form');
+  const [step, setStep] = useState<'form' | 'resume_payment' | 'key_needed' | 'receipt'>('form');
   const [tempRegId, setTempRegId] = useState<string>('');
+  const pendingEmailSentIdsRef = useRef<Set<string>>(new Set());
+  const autoLaunchedResumeIdRef = useRef<string | null>(null);
 
   const resolvedInitialState = initialState && (CCL_TRIAL_STATES.includes(initialState) || initialState.toLowerCase() === 'delhi')
     ? (initialState.toLowerCase() === 'delhi' ? 'Delhi NCR' : initialState)
@@ -84,19 +109,68 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     setActiveRazorpayKey(key);
     setInputRazorpayKey(key);
 
-    if (isOpen) {
-      const stateToUse = initialState && (CCL_TRIAL_STATES.includes(initialState) || initialState.toLowerCase() === 'delhi')
-        ? (initialState.toLowerCase() === 'delhi' ? 'Delhi NCR' : initialState)
-        : (formData.state || CCL_TRIAL_STATES[0]);
-      const cities = getCitiesForState(stateToUse);
-      const cityToUse = initialCity && cities.includes(initialCity) ? initialCity : (cities[0] || '');
-      setFormData(prev => ({
-        ...prev,
-        state: stateToUse,
-        city: cityToUse
-      }));
+    if (!isOpen) {
+      autoLaunchedResumeIdRef.current = null;
+      return;
     }
-  }, [isOpen, initialState, initialCity]);
+
+    if (resumeRegistration) {
+      const normalizedBall: BallType = resumeRegistration.ballType === 'Tennis' ? 'Tennis' : 'Leather';
+      const validSpec: PlayerSpeciality =
+        resumeRegistration.speciality === 'Bowler' ||
+        resumeRegistration.speciality === 'All Rounder' ||
+        resumeRegistration.speciality === 'Wicketkeeper'
+          ? resumeRegistration.speciality
+          : 'Batsman';
+      const resumeState = resumeRegistration.state || CCL_TRIAL_STATES[0];
+      const resumeCities = getCitiesForState(resumeState);
+      const resumeCity = resumeRegistration.city || resumeCities[0] || '';
+
+      const hydratedForm: RegistrationFormData = {
+        name: resumeRegistration.name,
+        age: resumeRegistration.age === '' ? '' : Number(resumeRegistration.age) || 18,
+        phone: resumeRegistration.phone,
+        email: resumeRegistration.email,
+        speciality: validSpec,
+        ballType: normalizedBall,
+        state: resumeState,
+        city: resumeCity,
+        referralCode: '',
+        agreedToTerms: true
+      };
+
+      setBallType(normalizedBall);
+      setFormData(hydratedForm);
+      setTempRegId(resumeRegistration.registrationNumber);
+      // Avoid sending duplicate pending email when returning from an email link
+      pendingEmailSentIdsRef.current.add(resumeRegistration.registrationNumber);
+      setCheckoutError(null);
+      setStep('resume_payment');
+
+      if (key && key.trim().length > 0 && autoLaunchedResumeIdRef.current !== resumeRegistration.registrationNumber) {
+        autoLaunchedResumeIdRef.current = resumeRegistration.registrationNumber;
+        setTimeout(() => {
+          triggerOfficialRazorpay(key.trim(), resumeRegistration.registrationNumber, hydratedForm, normalizedBall);
+        }, 200);
+      }
+      return;
+    }
+
+    setStep('form');
+    setCheckoutError(null);
+    const stateToUse = initialState && (CCL_TRIAL_STATES.includes(initialState) || initialState.toLowerCase() === 'delhi')
+      ? (initialState.toLowerCase() === 'delhi' ? 'Delhi NCR' : initialState)
+      : (formData.state || CCL_TRIAL_STATES[0]);
+    const cities = getCitiesForState(stateToUse);
+    const cityToUse = initialCity && cities.includes(initialCity) ? initialCity : (cities[0] || '');
+    setBallType(initialBallType);
+    setFormData(prev => ({
+      ...prev,
+      ballType: initialBallType,
+      state: stateToUse,
+      city: cityToUse
+    }));
+  }, [isOpen, initialBallType, initialState, initialCity, resumeRegistration]);
 
   const handleStateChange = (selectedState: string) => {
     const cities = getCitiesForState(selectedState);
@@ -116,23 +190,60 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   };
 
   /**
-   * Finalize payment completion:
-   * 1. Send confirmation e-mail to candidate on their entered email (Email 2: Payment Successful & Admit Card)
-   * 2. Send payment notification e-mail to company (website owner)
-   * 3. Show celebratory Payment Successful Pop-up Modal immediately
-   * 4. Set receipt step with official digital admit card
+   * Allocates sequential Registration Number starting at CCL-26-0001
    */
-  const handlePaymentSuccessful = (paymentId: string, orderId: string) => {
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const regNumber = `CCLREG-S2-${randomNum}`;
+  const allocateSequentialRegistrationNumber = async (snapshot: RegistrationFormData, chosenBall: BallType, feeAmount: number): Promise<string> => {
+    try {
+      const res = await fetch('/api/registrations/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: snapshot.name.trim(),
+          age: snapshot.age,
+          phone: snapshot.phone.trim(),
+          email: snapshot.email.trim(),
+          speciality: snapshot.speciality || 'Batsman',
+          ballType: chosenBall,
+          state: snapshot.state,
+          city: snapshot.city,
+          feeAmount
+        })
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.registrationNumber) {
+        return json.registrationNumber;
+      }
+    } catch {
+      // Fallback to local sequential ID if backend is offline
+    }
+    return getNextLocalSequentialRegId();
+  };
+
+  /**
+   * Finalize payment completion:
+   * 1. Keep exact sequential Registration Number (CCL-26-0001...)
+   * 2. Send Payment Confirmed e-mail to candidate
+   * 3. Send Payment notification e-mail to company
+   * 4. Mark registration complete on backend & remove from pending leads if applicable
+   * 5. Show celebratory Payment Successful Pop-up Modal & digital admit card
+   */
+  const handlePaymentSuccessful = (
+    paymentId: string,
+    orderId: string,
+    overrideRegId?: string,
+    overrideForm?: RegistrationFormData,
+    overrideBall?: BallType
+  ) => {
+    const activeForm = overrideForm || formData;
+    const activeBall = overrideBall || ballType;
+    const regNumber = overrideRegId || tempRegId || getNextLocalSequentialRegId();
     const reportingTime = '08:00 AM IST';
-    const trialLocation = `${formData.city}, ${formData.state}`;
-    const feeAmount = calculateRegistrationFee(ballType, formData.speciality || 'Batsman');
-    const trackingRefId = tempRegId || regNumber;
+    const trialLocation = `${activeForm.city}, ${activeForm.state}`;
+    const feeAmount = calculateRegistrationFee(activeBall, activeForm.speciality || 'Batsman');
 
     const record: RegistrationRecord = {
-      ...formData,
-      ballType,
+      ...activeForm,
+      ballType: activeBall,
       id: `ccl_reg_${Date.now()}`,
       registrationNumber: regNumber,
       feeAmount,
@@ -144,43 +255,59 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       reportingTime
     };
 
-    // User Email 1: Registration details received (stating registration is done, WITHOUT stating payment is pending)
-    sendCandidateRegistrationDetailsEmail({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      age: formData.age,
-      speciality: formData.speciality || 'Batsman',
-      ballType,
-      state: formData.state,
-      city: formData.city,
-      tempId: trackingRefId,
-      feeAmount
-    });
+    // Persist completion on backend store
+    fetch('/api/registrations/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registrationNumber: regNumber,
+        paymentId: record.paymentId,
+        orderId: record.orderId,
+        feeAmount,
+        name: activeForm.name.trim(),
+        age: activeForm.age,
+        phone: activeForm.phone.trim(),
+        email: activeForm.email.trim(),
+        speciality: activeForm.speciality || 'Batsman',
+        ballType: activeBall,
+        state: activeForm.state,
+        city: activeForm.city
+      })
+    }).catch(() => {});
 
-    // User Email 2: Payment Successful & Registration Process Complete with Official Admit Card & Trial info
+    // Remove from local pending leads if present now that payment is done
+    try {
+      const existingLeads = JSON.parse(localStorage.getItem('ccl_company_leads') || '[]');
+      const cleanedLeads = existingLeads.filter((l: any) => l.tempId !== regNumber && l.registrationNumber !== regNumber);
+      localStorage.setItem('ccl_company_leads', JSON.stringify(cleanedLeads));
+    } catch {
+      // ignore storage errors
+    }
+
+    // Player Email: Payment Confirmed & Admit Card with exact placeholders
     sendEmailToCandidate({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
+      name: activeForm.name.trim(),
+      email: activeForm.email.trim(),
+      age: activeForm.age,
       registrationNumber: regNumber,
-      ballType,
-      speciality: formData.speciality || 'Batsman',
-      city: formData.city,
-      state: formData.state,
+      ballType: activeBall,
+      speciality: activeForm.speciality || 'Batsman',
+      city: activeForm.city,
+      state: activeForm.state,
       paymentId: record.paymentId,
       orderId: record.orderId,
       reportingTime,
       feeAmount
     });
 
-    // Company Email (ONLY ONE EMAIL): Candidate details + statement that BOTH registration and payment are done
+    // Company Email (ONLY ONE EMAIL): Candidate details + payment confirmation
     sendPaymentEmailToCompany({
-      candidateName: formData.name.trim(),
-      candidateEmail: formData.email.trim(),
-      candidatePhone: formData.phone.trim(),
-      candidateAge: formData.age,
-      ballType,
-      speciality: formData.speciality || 'Batsman',
+      candidateName: activeForm.name.trim(),
+      candidateEmail: activeForm.email.trim(),
+      candidatePhone: activeForm.phone.trim(),
+      candidateAge: activeForm.age,
+      ballType: activeBall,
+      speciality: activeForm.speciality || 'Batsman',
       trialLocation,
       registrationNumber: regNumber,
       paymentId: record.paymentId,
@@ -189,7 +316,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     });
 
     setCompletedRecord(record);
-    setShowPaymentSuccessModal(true); // Trigger celebratory Payment Successful Pop-up!
+    setShowPaymentSuccessModal(true);
     setStep('receipt');
     setIsProcessingCheckout(false);
 
@@ -211,55 +338,63 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   /**
    * Triggers the real official Razorpay Checkout SDK modal
    */
-  const triggerOfficialRazorpay = async (keyToUse: string, activeTempId: string) => {
+  const triggerOfficialRazorpay = async (
+    keyToUse: string,
+    activeTempId: string,
+    overrideForm?: RegistrationFormData,
+    overrideBall?: BallType
+  ) => {
+    const activeForm = overrideForm || formData;
+    const activeBall = overrideBall || ballType;
     setIsProcessingCheckout(true);
     setCheckoutError(null);
 
-    const feeAmount = calculateRegistrationFee(ballType, formData.speciality || 'Batsman');
+    const feeAmount = calculateRegistrationFee(activeBall, activeForm.speciality || 'Batsman');
 
     const success = await launchRazorpayCheckout({
       keyId: keyToUse,
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      ballType,
-      speciality: formData.speciality || 'Batsman',
-      city: formData.city,
-      state: formData.state,
+      name: activeForm.name.trim(),
+      email: activeForm.email.trim(),
+      phone: activeForm.phone.trim(),
+      ballType: activeBall,
+      speciality: activeForm.speciality || 'Batsman',
+      city: activeForm.city,
+      state: activeForm.state,
       onSuccess: (paymentId, orderId) => {
-        handlePaymentSuccessful(paymentId, orderId);
+        handlePaymentSuccessful(paymentId, orderId, activeTempId, activeForm, activeBall);
       },
       onDismiss: () => {
         setIsProcessingCheckout(false);
-        // User closed or cancelled Razorpay checkout:
-        // 1. Mail to User stating registration details and that payment is pending
-        console.log(`[RAZORPAY CANCELLED] Payment cancelled for ${formData.name} (${activeTempId}). Sending pending notices.`);
-        sendRegistrationPendingEmail({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          phone: formData.phone.trim(),
-          age: formData.age,
-          speciality: formData.speciality || 'Batsman',
-          ballType,
-          state: formData.state,
-          city: formData.city,
-          tempId: activeTempId,
-          feeAmount
-        });
+        // Send pending email & company lead notification once per registration ID
+        if (!pendingEmailSentIdsRef.current.has(activeTempId)) {
+          pendingEmailSentIdsRef.current.add(activeTempId);
+          console.log(`[RAZORPAY CANCELLED] Payment pending for ${activeForm.name} (${activeTempId}). Sending pending notices.`);
+          sendRegistrationPendingEmail({
+            name: activeForm.name.trim(),
+            email: activeForm.email.trim(),
+            phone: activeForm.phone.trim(),
+            age: activeForm.age,
+            speciality: activeForm.speciality || 'Batsman',
+            ballType: activeBall,
+            state: activeForm.state,
+            city: activeForm.city,
+            tempId: activeTempId,
+            feeAmount
+          });
 
-        // 2. Mail to Company (ONLY ONE EMAIL) stating candidate details and that payment is pending
-        sendCandidateDetailsToCompany({
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          age: formData.age,
-          speciality: formData.speciality || 'Batsman',
-          ballType,
-          state: formData.state,
-          city: formData.city,
-          tempId: activeTempId,
-          feeAmount
-        });
+          sendCandidateDetailsToCompany({
+            name: activeForm.name.trim(),
+            phone: activeForm.phone.trim(),
+            email: activeForm.email.trim(),
+            age: activeForm.age,
+            speciality: activeForm.speciality || 'Batsman',
+            ballType: activeBall,
+            state: activeForm.state,
+            city: activeForm.city,
+            tempId: activeTempId,
+            feeAmount
+          });
+        }
       },
       onError: (err) => {
         setIsProcessingCheckout(false);
@@ -277,10 +412,10 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
    * Flow Step 1:
    * When player fills details and clicks "Proceed to Pay":
    * 1. Validate fields.
-   * 2. Initialize provisional tracking ID.
+   * 2. Allocate sequential CCL-26-XXXX Registration Number.
    * 3. Invoke Razorpay Checkout with calculated fee according to Ball Type & Speciality.
    */
-  const handleProceedToPay = (e: React.FormEvent) => {
+  const handleProceedToPay = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.age || !formData.phone.trim() || !formData.email.trim() || !formData.speciality) {
@@ -289,8 +424,8 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     }
 
     const ageNum = Number(formData.age);
-    if (isNaN(ageNum) || ageNum < 8 || ageNum > 35) {
-      alert('Age must be between 8 and 35 years (both inclusive) to register for CCL trials.');
+    if (isNaN(ageNum) || ageNum < 10 || ageNum > 35) {
+      alert('Age must be between 10 and 35 years (both inclusive) to register for CCL trials.');
       return;
     }
 
@@ -306,21 +441,21 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
       return;
     }
 
-    const tempId = `CCL-PEND-${Date.now().toString().slice(-6)}`;
-    setTempRegId(tempId);
+    setIsProcessingCheckout(true);
+    const feeAmount = calculateRegistrationFee(ballType, formData.speciality || 'Batsman');
+    const regId = tempRegId || await allocateSequentialRegistrationNumber(formData, ballType, feeAmount);
+    setTempRegId(regId);
 
-    // Check if Razorpay Key ID is already configured
     const key = activeRazorpayKey || getStoredRazorpayKey();
     if (key && key.trim().length > 0) {
-      // Launch official Razorpay Checkout directly
-      triggerOfficialRazorpay(key.trim(), tempId);
+      triggerOfficialRazorpay(key.trim(), regId);
     } else {
-      // Prompt for Razorpay Key ID / credentials
+      setIsProcessingCheckout(false);
       setStep('key_needed');
     }
   };
 
-  const handleSaveKeyAndPay = (e: React.FormEvent) => {
+  const handleSaveKeyAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputRazorpayKey.trim()) {
       alert('Please enter your Razorpay Key ID.');
@@ -329,7 +464,9 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     const cleanKey = inputRazorpayKey.trim();
     saveStoredRazorpayKey(cleanKey);
     setActiveRazorpayKey(cleanKey);
-    const idToUse = tempRegId || `CCL-PEND-${Date.now().toString().slice(-6)}`;
+    const feeAmount = calculateRegistrationFee(ballType, formData.speciality || 'Batsman');
+    const idToUse = tempRegId || await allocateSequentialRegistrationNumber(formData, ballType, feeAmount);
+    setTempRegId(idToUse);
     triggerOfficialRazorpay(cleanKey, idToUse);
   };
 
@@ -349,15 +486,19 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
         {/* Header - Brand Bar */}
         <div className="bg-[#0f172a] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-neutral-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-amber-500 text-neutral-950 flex items-center justify-center font-black text-lg shadow-sm">
-              CCL
+            <div className="p-0.5 bg-black rounded-lg border border-neutral-700 shrink-0">
+              <img
+                src="/assets/images/logo.jpg"
+                alt="Champion Cricket League Logo"
+                className="h-10 sm:h-11 w-auto object-contain rounded"
+              />
             </div>
             <div>
               <span className="text-[11px] font-black text-amber-400 tracking-wider uppercase block">
                 Season 2 Official Registration
               </span>
               <h3 className="font-extrabold text-base sm:text-lg text-white">
-                Champion Cricket League National Trials
+                Champion Cricket League Trials
               </h3>
             </div>
           </div>
@@ -421,7 +562,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 {/* Full Name */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Candidate Full Name *
+                    Player Full Name *
                   </label>
                   <input
                     type="text"
@@ -437,7 +578,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Age (8 to 35 Years) * {formData.age && (
+                      Age (10 to 35 Years) * {formData.age && (
                         <span className="ml-1 text-[#1B3E8E] font-extrabold">
                           ({Number(formData.age) < 16 ? 'Under-16 Category' : 'Open / Senior Category (16-35)'})
                         </span>
@@ -446,7 +587,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     <input
                       type="number"
                       required
-                      min="8"
+                      min="10"
                       max="35"
                       placeholder="e.g. 15"
                       value={formData.age}
@@ -629,7 +770,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {ballType} Ball Trial • {formData.speciality} • Season 2 Official Registration (Includes Jersey Kit & Videography)
+                      {ballType} Ball Trial • {formData.speciality} • Season 2 Official Registration (GST included)
                     </p>
                   </div>
                   <button
@@ -651,6 +792,99 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* ========================================================
+              STEP 1B: Direct Razorpay Payment Resume (From Pending Email Button)
+             ======================================================== */}
+          {step === 'resume_payment' && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <CreditCard className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    Complete Your Pending CCL Registration Payment
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Your registration details are saved under <strong className="font-mono text-[#1B3E8E]">{tempRegId}</strong>. Complete your fee payment via Razorpay to confirm your trial slot.
+                  </p>
+                </div>
+              </div>
+
+              {checkoutError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold block">Razorpay Notice:</span>
+                    <span>{checkoutError}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">Player Name</span>
+                  <span className="font-extrabold text-slate-900">{formData.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">Registration Number</span>
+                  <span className="font-mono font-extrabold text-[#1B3E8E]">{tempRegId}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">Specialty</span>
+                  <span className="font-bold text-slate-900">{formData.speciality} ({ballType} Ball)</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">Category</span>
+                  <span className="font-bold text-slate-900">{getAgeCategoryLabel(formData.age)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">State &amp; Trial Hub</span>
+                  <span className="font-bold text-slate-900">{formData.city}, {formData.state}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 uppercase font-bold text-[10px] block">Payable Fee (GST included)</span>
+                  <span className="font-black text-base text-[#1B3E8E]">
+                    ₹{calculateRegistrationFee(ballType, formData.speciality || 'Batsman').toLocaleString('en-IN')}/-
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                <button
+                  type="button"
+                  disabled={isProcessingCheckout}
+                  onClick={() => {
+                    const key = activeRazorpayKey || getStoredRazorpayKey();
+                    if (key && key.trim().length > 0) {
+                      triggerOfficialRazorpay(key.trim(), tempRegId);
+                    } else {
+                      setStep('key_needed');
+                    }
+                  }}
+                  className="flex-1 py-3 px-5 bg-[#1B3E8E] hover:bg-[#142e6b] text-white font-black rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isProcessingCheckout ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Opening Razorpay Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                      <span>Pay ₹{calculateRegistrationFee(ballType, formData.speciality || 'Batsman').toLocaleString('en-IN')}/- via Razorpay</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('form')}
+                  className="py-3 px-4 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-300 text-xs cursor-pointer"
+                >
+                  Edit Details
+                </button>
+              </div>
             </div>
           )}
 
@@ -747,8 +981,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
               <div id="ccl-admit-card" className="border-2 border-dashed border-[#1B3E8E] rounded-2xl p-4 sm:p-5 bg-slate-50 relative overflow-hidden">
                 <div className="flex justify-between items-start pb-4 border-b border-slate-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-lg bg-[#0f172a] text-amber-400 font-black flex items-center justify-center text-sm border border-neutral-700">
-                      CCL
+                    <div className="p-0.5 bg-black rounded-lg border border-neutral-700 shrink-0">
+                      <img
+                        src="/assets/images/logo.jpg"
+                        alt="Champion Cricket League Logo"
+                        className="h-10 w-auto object-contain rounded"
+                      />
                     </div>
                     <div>
                       <h5 className="font-black text-slate-900 text-sm sm:text-base leading-tight">

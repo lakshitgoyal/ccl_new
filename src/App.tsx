@@ -15,13 +15,14 @@ import { StatsCounter } from './components/StatsCounter';
 import { SportsTicker } from './components/SportsTicker';
 import { LeagueHighlights } from './components/LeagueHighlights';
 import { AboutSection } from './components/AboutSection';
-import { SponsorsSection } from './components/SponsorsSection';
 import { TrialsSection } from './components/TrialsSection';
 import { UpcomingTrialsFinder } from './components/UpcomingTrialsFinder';
 import { TeamsSection } from './components/TeamsSection';
-import { RegistrationModal } from './components/RegistrationModal';
+import { RegistrationModal, ResumeRegistrationData } from './components/RegistrationModal';
+import { decodePaymentResumeToken } from './services/notificationService';
 import { PointsCalculator } from './components/PointsCalculator';
 import { GalleryModal } from './components/GalleryModal';
+import { StateTrialsGallerySection } from './components/StateTrialsGallerySection';
 import { CompanyDashboardModal } from './components/CompanyDashboardModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { AboutPage } from './components/Pages/AboutPage';
@@ -32,7 +33,16 @@ import { ContactPage } from './components/Pages/ContactPage';
 import { PoliciesPage } from './components/Pages/PoliciesPage';
 import { PhysicCarePage } from './components/Pages/PhysicCarePage';
 import { ReviewsPage } from './components/Pages/ReviewsPage';
-import { GALLERY_ITEMS, TESTIMONIALS, TRIAL_VENUES, STATE_TEAMS } from './data/cclData';
+import {
+  GALLERY_ITEMS,
+  TESTIMONIALS,
+  TRIAL_VENUES,
+  STATE_TEAMS,
+  UTTARAKHAND_TRIAL_IMAGES,
+  MADHYA_PRADESH_TRIAL_IMAGES,
+  DELHI_TRIAL_IMAGES,
+  RAJASTHAN_TRIAL_IMAGES
+} from './data/cclData';
 import { 
   Camera, 
   Star, 
@@ -40,7 +50,6 @@ import {
   CheckCircle2, 
   MapPin,
   Calendar,
-  Clock,
   Trophy,
   ShieldCheck,
   ChevronRight
@@ -82,13 +91,59 @@ export default function App() {
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [selectedGalleryIndex, setSelectedGalleryIndex] = useState(0);
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [resumeRegistration, setResumeRegistration] = useState<ResumeRegistrationData | null>(null);
 
-  // Sync state with URL hash and sessionStorage for reliable multi-page routing
+  // Sync state with URL hash, sessionStorage, and email payment resume params
   useEffect(() => {
-    // Check initial query or hash for admin console modal
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true' || window.location.hash === '#admin' || window.location.hash === '#company') {
       setCompanyModalOpen(true);
+    }
+
+    const payRegId = urlParams.get('pay');
+    const payToken = urlParams.get('p');
+    if (payRegId) {
+      const decoded = payToken ? decodePaymentResumeToken(payToken) : null;
+      if (decoded) {
+        setResumeRegistration({
+          registrationNumber: decoded.r || payRegId,
+          name: decoded.n,
+          email: decoded.e,
+          phone: decoded.ph,
+          age: decoded.a,
+          speciality: decoded.sp,
+          ballType: decoded.bt === 'Tennis' ? 'Tennis' : 'Leather',
+          state: decoded.st,
+          city: decoded.ct
+        });
+        setRegisterModalOpen(true);
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      } else {
+        // Fallback: lookup from backend store by Registration Number
+        fetch(`/api/registrations/${encodeURIComponent(payRegId)}`)
+          .then((res) => res.json())
+          .then((json) => {
+            if (json?.success && json.record) {
+              const r = json.record;
+              setResumeRegistration({
+                registrationNumber: r.registrationNumber,
+                name: r.name,
+                email: r.email,
+                phone: r.phone,
+                age: r.age,
+                speciality: r.speciality,
+                ballType: r.ballType === 'Tennis' ? 'Tennis' : 'Leather',
+                state: r.state,
+                city: r.city
+              });
+              setRegisterModalOpen(true);
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+          });
+      }
     }
 
     const handleHashChange = () => {
@@ -146,6 +201,7 @@ export default function App() {
   };
 
   const handleOpenRegister = (ballType: BallType = 'Leather', state = '', city = '') => {
+    setResumeRegistration(null);
     setSelectedBallType(ballType);
     setSelectedStateForReg(state);
     setSelectedCityForReg(city);
@@ -158,7 +214,6 @@ export default function App() {
   };
 
   // Spotlights for the homepage to avoid duplicating the massive 16-state tables
-  const upcomingFeaturedTrials = TRIAL_VENUES.slice(0, 3);
   const featuredTeams = STATE_TEAMS.slice(0, 6);
 
   return (
@@ -227,9 +282,9 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* 3 Featured Trial Cards with Sports Energy */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {upcomingFeaturedTrials.map((venue) => (
+                {/* Featured Trial Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {TRIAL_VENUES.map((venue) => (
                     <div
                       key={venue.id}
                       className="group bg-white rounded-2xl p-5 border border-slate-200 hover:border-amber-400 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
@@ -238,41 +293,24 @@ export default function App() {
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1B3E8E] via-amber-400 to-red-500"></div>
 
                       <div className="space-y-3 pt-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-[#1B3E8E] bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg">
-                            {venue.state}
-                          </span>
-                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Trial Slots Open
-                          </span>
-                        </div>
-
                         <div>
-                          <h3 className="font-black text-lg text-slate-900 group-hover:text-[#1B3E8E] transition-colors leading-snug">
-                            {venue.city} Selection Trial
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                            Ground
+                          </span>
+                          <h3 className="font-black text-base text-slate-900 group-hover:text-[#1B3E8E] transition-colors leading-snug">
+                            {venue.venueName}
                           </h3>
-                          <p className="text-xs text-slate-500 mt-1 flex items-start gap-1.5">
-                            <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                            <span>{venue.venueName}</span>
-                          </p>
                         </div>
 
-                        <div className="space-y-2 pt-3 border-t border-slate-100 text-xs text-slate-700">
-                          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                            <Calendar className="w-4 h-4 text-[#1B3E8E] shrink-0" />
-                            <span className="font-extrabold text-slate-900">{venue.upcomingDate}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-slate-500 px-1">
-                            <span className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              Reporting: {venue.reportingTime}
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                              Turf Pitch
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100 text-xs">
+                          <Calendar className="w-4 h-4 text-[#1B3E8E] shrink-0" />
+                          <span className="font-extrabold text-slate-900">{venue.upcomingDate}</span>
                         </div>
+
+                        <p className="text-xs text-slate-500 flex items-start gap-1.5 leading-relaxed">
+                          <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                          <span>{venue.address}</span>
+                        </p>
                       </div>
 
                       <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-2">
@@ -280,7 +318,7 @@ export default function App() {
                           onClick={() => handleOpenRegister('Leather', venue.state, venue.city)}
                           className="w-full py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl transition-all text-center cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-1.5"
                         >
-                          <span>Book Trial Slot • Instant Admit Card</span>
+                          <span>Book Trial Slot</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -335,7 +373,7 @@ export default function App() {
                           onClick={() => handleNavigate('teams')}
                           className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-black rounded-xl text-xs sm:text-sm transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
                         >
-                          <span>Explore All 16 State Franchises & Squads</span>
+                          <span>Explore All 16 State Teams & Squads</span>
                           <ArrowRight className="w-4 h-4 text-neutral-950" />
                         </button>
                         <button
@@ -393,7 +431,7 @@ export default function App() {
                       On-Ground Action
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                      Match & Trial Highlights
+                      Trial Highlights
                     </h2>
                     <p className="text-slate-600 text-xs sm:text-sm mt-1">
                       Explore authentic photos from turf trials and championship matches.
@@ -459,7 +497,7 @@ export default function App() {
                     onClick={() => handleNavigate('reviews')}
                     className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#1B3E8E] hover:text-[#142e6b] transition-colors cursor-pointer shrink-0"
                   >
-                    <span>Read All 12,000+ Reviews</span>
+                    <span>Read All 1000+ Reviews</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -491,8 +529,6 @@ export default function App() {
               </div>
             </section>
 
-            {/* Official Sponsors & Partners with Auto-Scroll - Home Page Only */}
-            <SponsorsSection />
           </div>
         )}
 
@@ -517,20 +553,14 @@ export default function App() {
         {/* Dedicated Trials View */}
         {currentView === 'trials' && (
           <div className="py-8 bg-slate-100 min-h-[80vh]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-8 mb-4">
-              <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+            <div className="max-w-7xl mx-auto px-4 sm:px-8 mb-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
                 <button onClick={() => handleNavigate('home')} className="hover:text-[#1B3E8E] font-medium cursor-pointer">Home</button>
                 <span>/</span>
                 <button onClick={() => handleNavigate('selection-process')} className="hover:text-[#1B3E8E] font-medium cursor-pointer">Process</button>
                 <span>/</span>
                 <span className="text-slate-900 font-bold">Upcoming Trial Venues & Dates</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                State Trial Venues & Schedules
-              </h1>
-              <p className="text-sm text-slate-600 mt-1">
-                Phase 1 trials active across 16 states. Book your slot for Leather ball or Tennis ball trials.
-              </p>
             </div>
             <TrialsSection onRegisterVenue={handleOpenRegister} />
           </div>
@@ -545,13 +575,13 @@ export default function App() {
                 <span>/</span>
                 <button onClick={() => handleNavigate('about')} className="hover:text-[#1B3E8E] font-medium cursor-pointer">About CCL</button>
                 <span>/</span>
-                <span className="text-slate-900 font-bold">State Franchises & Teams</span>
+                <span className="text-slate-900 font-bold">State Teams</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                Official State Franchises & Squads
+                Official State Teams & Squads
               </h1>
               <p className="text-sm text-slate-600 mt-1">
-                Explore all state franchise teams competing in the Champion Cricket League Season-2.
+                Explore all state teams competing in the Champion Cricket League Season-2.
               </p>
             </div>
             <TeamsSection />
@@ -587,6 +617,32 @@ export default function App() {
                 <p className="text-sm text-slate-600 mt-1">
                   Click any image to launch the full-screen photo lightbox with category filtering.
                 </p>
+              </div>
+
+              <StateTrialsGallerySection
+                title="Uttarakhand State Match"
+                images={UTTARAKHAND_TRIAL_IMAGES}
+              />
+
+              <StateTrialsGallerySection
+                title="Madhya Pradesh State Match"
+                images={MADHYA_PRADESH_TRIAL_IMAGES}
+              />
+
+              <StateTrialsGallerySection
+                title="Delhi State Match"
+                images={DELHI_TRIAL_IMAGES}
+              />
+
+              <StateTrialsGallerySection
+                title="Rajasthan State Match"
+                images={RAJASTHAN_TRIAL_IMAGES}
+              />
+
+              <div className="text-center mb-6">
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  Trial Highlights
+                </h2>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -659,7 +715,11 @@ export default function App() {
         initialBallType={selectedBallType}
         initialState={selectedStateForReg}
         initialCity={selectedCityForReg}
-        onClose={() => setRegisterModalOpen(false)}
+        resumeRegistration={resumeRegistration}
+        onClose={() => {
+          setRegisterModalOpen(false);
+          setResumeRegistration(null);
+        }}
       />
 
       <PointsCalculator

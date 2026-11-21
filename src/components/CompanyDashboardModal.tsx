@@ -29,7 +29,7 @@ interface CompanyDashboardModalProps {
 }
 
 // Allowed Admin Passkeys
-const VALID_PASSKEYS = ['ccl2026', 'ccl@admin2026', 'admin123', 'khelbharat2026'];
+const VALID_PASSKEYS = ['ccl2026', 'ccl@admin2026', 'admin123'];
 
 export const CompanyDashboardModal: React.FC<CompanyDashboardModalProps> = ({
   isOpen,

@@ -53,16 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1.5 text-neutral-300 hover:text-emerald-400 transition-colors font-semibold text-xs"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>WhatsApp: +91 8800763536</span>
+              <span>WhatsApp Only: +91 8800763536</span>
             </a>
             <span className="hidden md:inline text-neutral-700">|</span>
-            <a 
-              href="tel:01169311383" 
-              className="hidden sm:flex items-center gap-1.5 text-neutral-300 hover:text-amber-400 transition-colors text-xs font-semibold"
-            >
+            <div className="hidden sm:flex items-center gap-1.5 text-neutral-300 text-xs font-semibold">
               <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Helpline: 011 69311383</span>
-            </a>
+              <span>Helpline:</span>
+              <a href="tel:01169311383" className="hover:text-amber-400 transition-colors">01169311383</a>
+              <span className="text-neutral-400">,</span>
+              <a href="tel:01169310488" className="hover:text-amber-400 transition-colors">01169310488</a>
+            </div>
           </div>
 
           {/* TOP CENTER: Registrations closing soon – Register Now */}

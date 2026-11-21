@@ -48,9 +48,7 @@ export const SelectionProcessPage: React.FC<SelectionProcessPageProps> = ({
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-slate-900">Step 1: State Trial Net Sessions</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Registered candidates report to their selected state trial ground in cricket sportswear or whites. 
-                  Batsmen face 4–5 overs against combination pace and spin bowling under video recording. 
-                  Bowlers bowl 4–5 overs with speed and release-point tracking. Wicketkeepers complete a 30-minute agility, glove-work, and stumping circuit.
+                  Registered candidates must report to their selected state trial venue at 8:00 AM, wearing proper cricket sportswear, including a white jersey and sports shoes. The cricket kit and other required playing equipment will be provided by the CCL team on ground. During the trial, each player will have the opportunity to face 3–4 overs against a combination of pace and spin bowling. Players will be evaluated based on their batting skills, technique, shot selection, and overall cricketing performance.
                 </p>
                 <div className="pt-2 flex flex-wrap gap-2 text-xs">
                   <span className="px-2.5 py-1 rounded bg-blue-100 text-blue-800 font-semibold">
@@ -74,17 +72,19 @@ export const SelectionProcessPage: React.FC<SelectionProcessPageProps> = ({
                 2
               </span>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Step 2: State League Match Registration</h3>
+                <h3 className="text-xl font-bold text-slate-900">Step 2: State League Match Qualification</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Players shortlisted from Phase 1 are drafted into state franchises (e.g., Delhi Challengers, Gujarat Titans CCL, Punjab Kings CCL). 
-                  Every player is guaranteed:
+                  Shortlisted players from Phase 1 will advance to the next stage, where they must achieve 100 points to qualify for the knockout matches. Each team will play two matches to earn points, with the following match format:
                 </p>
-                <ul className="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1 pl-1">
-                  <li><strong>Under-16 Category:</strong> Guaranteed two 25-over matches per player.</li>
-                  <li><strong>Open / Senior Category:</strong> Guaranteed two 20-over matches per player.</li>
-                  <li>Full accommodation, healthy nutritional athlete meals, and named match jerseys arranged by Khel Bharat.</li>
-                  <li>Ball-by-ball digital scoring on Cricheroes with player performance profiles.</li>
-                </ul>
+                <ol className="list-[lower-alpha] list-inside text-xs sm:text-sm text-slate-700 space-y-1.5 pl-1">
+                  <li><strong>Under-14 &amp; Under-16:</strong> Two 25-over matches per team.</li>
+                  <li><strong>Open / Senior, Leather &amp; Tennis:</strong> Two 20-over matches per team.</li>
+                  <li>Full accommodation, refreshments, and lunch during the match schedule.</li>
+                  <li>Colorful, personalized match jerseys will be provided.</li>
+                  <li>Ball-by-ball digital scoring through Cric Heroes, with individual player performance profiles.</li>
+                  <li>Live streaming on the official CCL YouTube channel.</li>
+                  <li>Live match commentary for an enhanced match-day experience.</li>
+                </ol>
               </div>
             </div>
           </div>

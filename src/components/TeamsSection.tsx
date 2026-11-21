@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, MapPin, User, Award } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { STATE_TEAMS } from '../data/cclData';
 
 export const TeamsSection: React.FC = () => {
@@ -8,7 +8,7 @@ export const TeamsSection: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-8">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#1B3E8E] bg-blue-100 mb-3 uppercase tracking-wider">
-            State Franchises
+            State Teams
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3">
             Champion Cricket League Teams
@@ -18,60 +18,40 @@ export const TeamsSection: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-          {STATE_TEAMS.map((team) => (
-            <div
-              key={team.id}
-              className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-            >
-              <div className="p-5 text-center">
-                <div className="w-20 h-20 mx-auto rounded-full p-1 bg-slate-50 border border-slate-200 shadow-inner mb-4 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {STATE_TEAMS.map((team) => {
+            const isSeasonOneWinner =
+              team.id === 'uttarakhand' || team.championships === 'Season 1 Winner';
+
+            return (
+              <div
+                key={team.id}
+                className={`bg-white rounded-2xl overflow-hidden transition-all flex flex-col justify-between group aspect-square ${
+                  isSeasonOneWinner
+                    ? 'border-2 border-amber-400 shadow-xl shadow-amber-200/50 ring-2 ring-amber-300/60'
+                    : 'border border-slate-200 shadow-sm hover:shadow-lg'
+                }`}
+              >
+                {isSeasonOneWinner && (
+                  <div className="w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black uppercase tracking-wider text-xs py-2 px-3 flex items-center justify-center gap-1.5 shadow-xs shrink-0 border-b border-amber-600/20">
+                    <Trophy className="w-4 h-4 text-slate-950 shrink-0" />
+                    <span>Season 1 Winner</span>
+                  </div>
+                )}
+
+                <div className="flex-1 min-h-0 w-full p-2 bg-white flex items-center justify-center overflow-hidden">
                   <img
                     src={team.logo}
                     alt={team.name}
-                    className="w-full h-full object-cover rounded-full"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/assets/images/logo.jpg';
                     }}
                   />
                 </div>
-
-                <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 mb-1 block">
-                  {team.state}
-                </span>
-                <h3 className="font-bold text-slate-900 text-base mb-3 leading-tight">
-                  {team.name}
-                </h3>
-
-                {team.championships && (
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 mb-3">
-                    <Award className="w-3 h-3 text-amber-500" />
-                    <span>{team.championships}</span>
-                  </div>
-                )}
-
-                <div className="space-y-1.5 text-left text-xs text-slate-600 pt-3 border-t border-slate-100">
-                  <div className="flex items-start gap-1.5">
-                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="line-clamp-1">Coach: {team.headCoach}</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="line-clamp-1">Star: {team.starPlayer}</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="line-clamp-1">{team.homeGround}</span>
-                  </div>
-                </div>
               </div>
-
-              <div 
-                className="h-1.5 w-full"
-                style={{ backgroundColor: team.primaryColor }}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

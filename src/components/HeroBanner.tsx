@@ -15,27 +15,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const slides = [
     {
       id: 1,
-      image: '/assets/images/one.png',
-      alt: 'Season 2 Registration - Leather and Tennis Ball Cricket Championship League',
-      ballType: 'Leather' as BallType
+      image: '/assets/aistudio/WhatsApp_Image_2026-11-20_at_16.14.08_6edf676b.jpeg',
+      alt: 'Champion Cricket League Season 1 Grand Final Winner - Uttarakhand Strikers',
+      ballType: 'Leather' as BallType,
+      contain: true
     },
     {
       id: 2,
-      image: '/assets/images/two.png',
-      alt: 'State League & National Camp - District Nets to National Stadiums',
-      ballType: 'Tennis' as BallType
-    },
-    {
-      id: 3,
-      image: '/assets/images/three.png',
-      alt: '100-Point Merit Selection - Pure Performance Cricket League',
-      ballType: 'Leather' as BallType
-    },
-    {
-      id: 4,
-      image: '/assets/images/four.png',
-      alt: 'BCCI Certified Panel Masterclasses & Sports Science',
-      ballType: 'Leather' as BallType
+      image: '/assets/aistudio/WhatsApp_Image_2026-11-16_at_17.14.56_6fae8abb.jpeg',
+      alt: 'Champion Cricket League Tournament Journey - Only 5 Simple Steps',
+      ballType: 'Leather' as BallType,
+      contain: true
     }
   ];
 
@@ -86,7 +76,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <img
               src={slide.image}
               alt={slide.alt}
-              className="w-full h-full object-contain sm:object-cover object-center"
+              className={`w-full h-full object-center ${
+                slide.contain ? 'object-contain' : 'object-contain sm:object-cover'
+              }`}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = '/assets/images/t22.jpg';
               }}
@@ -98,7 +90,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-20 flex items-center gap-1.5 sm:gap-2 bg-[#C04A18]/90 hover:bg-[#C04A18] text-white px-3.5 py-2 sm:px-4.5 sm:py-2.5 rounded-full shadow-2xl backdrop-blur-md border border-[#FFA07A]/40 transition-all duration-300">
           <Flame className="w-4 h-4 text-amber-200 fill-amber-200 animate-pulse shrink-0" />
           <span className="font-black text-xs sm:text-sm tracking-wider uppercase">Season 2 Trials</span>
-          <span className="hidden sm:inline-block text-xs font-black bg-black/45 px-2.5 py-0.5 rounded-full text-orange-200">3+ Years • 800+ Matches</span>
+          <span className="hidden sm:inline-block text-xs font-black bg-black/45 px-2.5 py-0.5 rounded-full text-orange-200">3+ Years • 500+ Matches</span>
         </div>
 
         {/* Left Arrow Navigation with Burnt Orange Hover */}
@@ -157,7 +149,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#C04A18]"></span>
               <span className="text-amber-300 font-black">3+ Years of Excellence</span>
               <span className="w-2 h-2 rounded-full bg-[#C04A18]"></span>
-              <span className="text-amber-300 font-black">800+ Matches Played</span>
+              <span className="text-amber-300 font-black">500+ Matches Played</span>
               <span className="w-2 h-2 rounded-full bg-[#C04A18]"></span>
               <span>100-Point Merit Selection</span>
             </div>

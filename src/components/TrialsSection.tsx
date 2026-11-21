@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Clock, Calendar, UserCheck, AlertCircle, ArrowRight } from 'lucide-react';
-import { TRIAL_VENUES, CCL_TRIAL_STATES } from '../data/cclData';
+import { Search, MapPin, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
+import { TRIAL_VENUES } from '../data/cclData';
 import { BallType } from '../types';
 
 interface TrialsSectionProps {
@@ -11,28 +11,30 @@ export const TrialsSection: React.FC<TrialsSectionProps> = ({ onRegisterVenue })
   const [selectedState, setSelectedState] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  const availableStates = Array.from(new Set(TRIAL_VENUES.map((v) => v.state)));
+
   const filteredVenues = TRIAL_VENUES.filter((venue) => {
-    const matchesState = selectedState === 'All' || venue.state.toLowerCase() === selectedState.toLowerCase() || (selectedState === 'Delhi NCR' && venue.state.toLowerCase().includes('delhi'));
+    const matchesState = selectedState === 'All' || venue.state.toLowerCase() === selectedState.toLowerCase();
     const matchesSearch = 
-      venue.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      venue.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
       venue.venueName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       venue.state.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesState && matchesSearch;
   });
 
   return (
-    <section className="py-16 bg-slate-100">
+    <section className="pt-4 pb-16 bg-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#1B3E8E] bg-blue-50 mb-2 uppercase tracking-wider">
               Nationwide Talent Scouting
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Upcoming Trial Locations & Schedules
-            </h2>
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Upcoming State Trial Locations &amp; Schedules
+            </h1>
             <p className="text-slate-600 text-sm sm:text-base mt-1">
-              Select your nearest trial venue to view reporting guidelines, available net slots, and dates.
+              Select your nearest trial venue to view trial dates and ground locations.
             </p>
           </div>
 
@@ -44,8 +46,8 @@ export const TrialsSection: React.FC<TrialsSectionProps> = ({ onRegisterVenue })
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search city or venue..."
-                className="pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] w-48 sm:w-56"
+                placeholder="Search ground or location..."
+                className="pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] w-48 sm:w-56 bg-white"
               />
             </div>
 
@@ -54,94 +56,57 @@ export const TrialsSection: React.FC<TrialsSectionProps> = ({ onRegisterVenue })
               onChange={(e) => setSelectedState(e.target.value)}
               className="py-2 px-3 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white text-slate-700"
             >
-              <option value="All">All States (15 States)</option>
-              {CCL_TRIAL_STATES.map((st) => (
+              <option value="All">All Upcoming States</option>
+              {availableStates.map((st) => (
                 <option key={st} value={st}>{st}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Venues Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Venues Grid - Only Ground, Date & Location */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredVenues.map((venue) => (
             <div
               key={venue.id}
               className="border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between bg-white relative"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-[#1B3E8E]">
-                    {venue.state}
+              <div className="space-y-4">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Ground
                   </span>
-                  <span
-                    className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      venue.status === 'Filling Fast'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {venue.status}
-                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
+                    {venue.venueName}
+                  </h3>
                 </div>
 
-                <h3 className="text-lg font-bold text-slate-900 mb-1">
-                  {venue.venueName}
-                </h3>
-                
-                <div className="flex items-start gap-1.5 text-xs text-slate-500 mb-4">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                  <span>{venue.address}</span>
+                <div className="flex items-center gap-2.5 bg-blue-50/70 border border-blue-100 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm">
+                  <Calendar className="w-4 h-4 text-[#1B3E8E] shrink-0" />
+                  <span className="text-slate-500 font-semibold">Date:</span>
+                  <span className="font-black text-slate-900">{venue.upcomingDate}</span>
                 </div>
 
-                <div className="space-y-2 py-3 border-y border-slate-100 text-xs text-slate-700 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-500">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                      Trial Date:
-                    </span>
-                    <span className="font-bold text-slate-900">{venue.upcomingDate}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-500">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      Reporting Time:
-                    </span>
-                    <span className="font-bold text-slate-900">{venue.reportingTime}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-500">
-                      <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                      Chief Selector:
-                    </span>
-                    <span className="font-semibold text-slate-800">{venue.chiefSelector}</span>
-                  </div>
-                </div>
-
-                {/* Remaining slot meters */}
-                <div className="grid grid-cols-2 gap-2 text-xs mb-4">
-                  <div className="bg-red-50 p-2 rounded-lg border border-red-100 text-center">
-                    <div className="text-red-700 font-bold text-sm">{venue.leatherSlotsAvailable}</div>
-                    <div className="text-red-900/70 text-[11px]">Leather Slots Left</div>
-                  </div>
-                  <div className="bg-amber-50 p-2 rounded-lg border border-amber-100 text-center">
-                    <div className="text-amber-700 font-bold text-sm">{venue.tennisSlotsAvailable}</div>
-                    <div className="text-amber-900/70 text-[11px]">Tennis Slots Left</div>
+                <div className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 pt-1">
+                  <MapPin className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-900">Location: </span>
+                    <span className="leading-relaxed text-slate-600">{venue.address}</span>
                   </div>
                 </div>
               </div>
 
               {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-2.5 pt-5 mt-5 border-t border-slate-100">
                 <button
                   onClick={() => onRegisterVenue('Leather', venue.state, venue.city)}
-                  className="w-full py-2 bg-[#1B3E8E] hover:bg-[#142e6b] text-white text-xs font-bold rounded-lg transition-colors text-center"
+                  className="w-full py-2.5 bg-[#1B3E8E] hover:bg-[#142e6b] text-white text-xs font-bold rounded-lg transition-colors text-center cursor-pointer"
                 >
                   Leather Ball
                 </button>
                 <button
                   onClick={() => onRegisterVenue('Tennis', venue.state, venue.city)}
-                  className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors text-center"
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors text-center cursor-pointer"
                 >
                   Tennis Ball
                 </button>

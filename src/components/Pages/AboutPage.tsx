@@ -19,7 +19,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onRegister }) => {
             Democratizing Professional Cricket for Every Deserving Indian Athlete
           </h1>
           <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-            Champion Cricket League (CCL) was established to dismantle the barriers of access, favoritism, and obscurity in Indian grassroots sports. With 3+ years of excellence and 800+ matches played nationwide, we provide a transparent, meritocratic pathway for young cricketers from district nets all the way to state franchises and national recognition.
+            Champion Cricket League (CCL) was established to dismantle the barriers of access, favoritism, and obscurity in Indian grassroots sports. With 3+ years of excellence and 500+ matches played nationwide, we provide a transparent, meritocratic pathway for young cricketers from district nets all the way to state teams and national recognition.
           </p>
         </div>
       </div>
@@ -27,19 +27,19 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onRegister }) => {
       {/* Main Image + Mission Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 mb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200">
+          <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-200 bg-slate-950">
             <img
-              src="/assets/images/four.png"
-              alt="CCL Cricket Coaching"
-              className="w-full h-[400px] object-cover"
+              src="/assets/aistudio/WhatsApp_Image_2026-11-20_at_16.14.08_6edf676b.jpeg"
+              alt="Champion Cricket League Season 1 Grand Final Winner - Uttarakhand Strikers"
+              className="w-full h-auto object-contain block"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/assets/images/one.png';
+                (e.target as HTMLImageElement).src = '/assets/images/logo.jpg';
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-6">
+            <div className="bg-slate-950 px-5 py-4 border-t border-white/10">
               <div className="text-white">
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider block">Official Scouting</span>
-                <h3 className="text-xl font-bold">Turf Wickets & Video Biomechanics Analysis</h3>
+                <h3 className="text-lg sm:text-xl font-bold">Turf Wickets &amp; Video Biomechanics Analysis</h3>
               </div>
             </div>
           </div>
@@ -49,7 +49,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onRegister }) => {
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900">What is Champion Cricket League?</h2>
               <div className="text-sm text-slate-700 leading-relaxed space-y-3 font-normal">
                 <p>
-                  <strong>Ans – </strong>Champion Cricket League (CCL) is a competitive cricket platform powered by Khel Bharat, created to give aspiring cricketers an opportunity to showcase their talent, compete in organized matches, and progress through a structured cricket journey. CCL conducts cricket trials across multiple cities and states in India, providing players from different age groups and backgrounds a platform to demonstrate their batting, bowling, wicket-keeping, and all-round skills.
+                  Champion Cricket League (CCL) is a competitive cricket platform powered by Khel Bharat, created to give aspiring cricketers an opportunity to showcase their talent, compete in organized matches, and progress through a structured cricket journey. CCL conducts cricket trials across multiple cities and states in India, providing players from different age groups and backgrounds a platform to demonstrate their batting, bowling, wicket-keeping, and all-round skills.
                 </p>
                 <p>
                   The CCL journey begins with registration and trials, followed by performance-based selection. Selected players move forward to competitive matches and further stages of the league, where their performances are evaluated through a structured points system. Players who meet the required performance criteria can progress to subsequent stages and camps. From Trials → Selection → Competitive Matches → Camps → Advanced League Stages, Champion Cricket League aims to create an organized pathway where aspiring players can experience competitive cricket, showcase their performance, and take the next step in their cricket journey.
@@ -101,7 +101,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onRegister }) => {
       <div className="bg-slate-50 py-16 border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Why Athletes Trust CCL</h2>
+            <h2 className="text-3xl font-bold text-slate-900">Why Athletes Trust Champion Cricket League ?</h2>
             <p className="text-sm text-slate-600 mt-2">Built on four foundational pillars of sporting integrity.</p>
           </div>
 

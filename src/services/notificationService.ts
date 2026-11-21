@@ -1,3 +1,5 @@
+import { calculateRegistrationFee } from '../data/cclData';
+
 export interface CandidateRegistrationEmail {
   id: string;
   emailType: 'payment_pending' | 'payment_confirmed';
@@ -41,11 +43,10 @@ export interface CompanyPaymentNotificationEmail {
 export const COMPANY_OWNER_EMAIL = 'registration@khelbharatofficial.com';
 export const COMPANY_OFFICIAL_EMAIL = 'support@khelbharatofficial.com';
 export const REGISTRATION_SYSTEM_EMAIL = 'registration@khelbharatofficial.com';
-export const GMAIL_BACKUP_NOTIFICATION_EMAIL = 'khelbharat2026@gmail.com';
 
 /**
  * Dispatches real emails via the backend SMTP route (/api/send-email)
- * backed by the official Gmail SMTP transport.
+ * backed by the official registration@khelbharatofficial.com SMTP transport.
  */
 export const dispatchRealEmailViaApi = async (options: {
   to: string;
@@ -53,6 +54,7 @@ export const dispatchRealEmailViaApi = async (options: {
   html?: string;
   text?: string;
   replyTo?: string;
+  isOwnerNotification?: boolean;
 }) => {
   try {
     const res = await fetch('/api/send-email', {
@@ -160,21 +162,100 @@ Champion Cricket League Payment Automation Engine
 
   console.log('[COMPANY NOTIFICATION] Candidate details received by website owner (registration@khelbharatofficial.com) - PAYMENT PENDING:', pendingRecord);
   dispatchRealEmailViaApi({
-    to: `${COMPANY_OWNER_EMAIL}, ${GMAIL_BACKUP_NOTIFICATION_EMAIL}`,
+    to: COMPANY_OWNER_EMAIL,
     subject,
     text: emailBody,
-    replyTo: details.email
+    replyTo: details.email,
+    isOwnerNotification: true
   });
   return pendingRecord;
 };
 
 /**
- * EMAIL 1: Registration Received & Pending Payment Guidance
- * Dispatched to the candidate immediately when their details are submitted,
- * clearly guiding them to complete payment via UPI Apps / Cards.
+ * Helper to compute standardized Age Category label without mix-ups
  */
-import { calculateRegistrationFee } from '../data/cclData';
+export const getAgeCategoryLabel = (age?: string | number): string => {
+  const num = Number(age);
+  if (isNaN(num) || num <= 0) return 'Open / Senior (16–35)';
+  return num < 16 ? 'Under-16' : 'Open / Senior (16–35)';
+};
 
+/**
+ * URL-safe Base64 token helpers so the email payment button can restore exact
+ * player details & open Razorpay Checkout directly on any device/browser.
+ */
+export interface PendingPaymentPayload {
+  r: string;   // registrationNumber (CCL-26-0001)
+  n: string;   // name
+  e: string;   // email
+  ph: string;  // phone
+  a: string | number; // age
+  sp: string;  // speciality
+  bt: string;  // ballType
+  st: string;  // state
+  ct: string;  // city
+}
+
+export const encodePaymentResumeToken = (payload: PendingPaymentPayload): string => {
+  try {
+    const json = JSON.stringify(payload);
+    const base64 = btoa(unescape(encodeURIComponent(json)));
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch {
+    return '';
+  }
+};
+
+export const decodePaymentResumeToken = (token: string): PendingPaymentPayload | null => {
+  try {
+    let base64 = token.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    const json = decodeURIComponent(escape(atob(base64)));
+    const parsed = JSON.parse(json);
+    if (parsed && parsed.r && parsed.n) {
+      return parsed as PendingPaymentPayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+export const buildDirectPaymentUrl = (data: {
+  tempId: string;
+  name: string;
+  email: string;
+  phone: string;
+  age: string | number;
+  speciality: string;
+  ballType: string;
+  state: string;
+  city: string;
+}): string => {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://khelbharatofficial.com';
+
+  const token = encodePaymentResumeToken({
+    r: data.tempId,
+    n: data.name,
+    e: data.email,
+    ph: data.phone,
+    a: data.age,
+    sp: data.speciality,
+    bt: data.ballType,
+    st: data.state,
+    ct: data.city
+  });
+
+  return `${origin}/?pay=${encodeURIComponent(data.tempId)}&p=${encodeURIComponent(token)}`;
+};
+
+/**
+ * EMAIL 1: Registration Received – Payment Pending
+ * Exact personalized draft with a direct Razorpay payment CTA button (no raw link shown).
+ */
 export const sendRegistrationPendingEmail = (data: {
   name: string;
   email: string;
@@ -188,57 +269,33 @@ export const sendRegistrationPendingEmail = (data: {
   feeAmount?: number;
 }): CandidateRegistrationEmail => {
   const fee = data.feeAmount || calculateRegistrationFee(data.ballType as any, data.speciality);
-  const subject = `Registration Received - Complete Your Payment for Season 2 Trials [${data.tempId}]`;
+  const ageCategory = getAgeCategoryLabel(data.age);
+  const specialtyDisplay = `${data.speciality} (${data.ballType} Ball)`;
+  const paymentButtonUrl = buildDirectPaymentUrl(data);
+  const subject = `CCL Registration Received – Payment Pending`;
 
+  // Plain-text fallback strictly avoids raw URLs
   const emailBody = `
-From: Champion Cricket League <registration@khelbharatofficial.com>
-Reply-To: support@khelbharatofficial.com
-To: ${data.name} <${data.email}>
 Subject: ${subject}
 
-Dear ${data.name},
+Hi ${data.name}, 🏏
 
-Thank you for registering for Champion Cricket League Season 2 Trials!
+Thank you for registering for the Champion Cricket League (CCL) Trials. Your registration has been successfully received.
 
-Your registration details have been received and a provisional trial slot has been reserved for you. To confirm your slot, generate your official Trial Admit Card, and lock in your trial date & reporting schedule, please complete your registration fee payment.
+Registration Number: ${data.tempId}
+Specialty: ${specialtyDisplay}
+Category: ${ageCategory}
+State: ${data.state}
+Payment Status: Pending
 
-==================================================
-        CANDIDATE REGISTRATION SUMMARY
-==================================================
-Provisional Ref ID : ${data.tempId}
-Candidate Full Name: ${data.name}
-Age / Category     : ${data.age} Years (${Number(data.age) < 16 ? 'Under-16' : 'Open/Senior'})
-Mobile Number      : ${data.phone}
-Email Address      : ${data.email}
-Ball Category      : ${data.ballType} Ball Trial
-Playing Speciality : ${data.speciality}
-Trial Location     : ${data.city}, ${data.state}
-Registration Fee   : ₹${fee} (Inclusive of GST & Official Jersey kit)
-Payment Status     : PENDING (Action Required)
-==================================================
+To confirm your registration for upcoming trial slot, please complete your payment by clicking the "Complete Payment – ₹${fee}" button in this email.
 
-HOW TO COMPLETE YOUR PAYMENT:
-1. Return to the registration screen or open your payment window.
-2. Select your preferred payment method:
-   - All major UPI Apps: PhonePe, Google Pay, Paytm, BHIM, CRED
-   - Credit / Debit Cards (Visa, MasterCard, RuPay) & Net Banking
-3. After completing the payment, your official Admit Card with QR verification code and exact reporting time will be issued instantly.
-
-IMPORTANT NOTICE:
-- Your provisional trial slot is held for 48 hours pending payment.
-- Once payment is confirmed, an official Trial Admit Card with reporting guidelines will be sent to your email.
-- You will need to bring an original Date of Birth proof (Aadhaar Card / School Leaving Certificate) on trial day.
-
-Need help? Contact our National Helpdesk:
-Email: support@khelbharatofficial.com
-Helpline: 011 69311383
-WhatsApp: +91 8800763536
+For assistance, contact us at 01169311383 and 01169310488 or support@khelbharatofficial.com (WhatsApp Only: +91 8800763536)
+Monday to Saturday | 10:00 AM – 7:00 PM
 
 Best regards,
-Player Operations Board,
-Champion Cricket League (CCL)
-Powered by Khel Bharat
-www.khelbharatofficial.com
+Team Champion Cricket League
+Khel Bharat | Play. Perform. Get Recognized.
 `.trim();
 
   const htmlBody = `
@@ -250,162 +307,127 @@ www.khelbharatofficial.com
   <title>${subject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0b1120; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0b1120; padding: 24px 12px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0b1120; padding: 28px 12px;">
     <tr>
       <td align="center">
-        <!-- Container -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #1e293b;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 28px rgba(0,0,0,0.35); border: 1px solid #1e293b;">
           
-          <!-- Header Banner -->
+          <!-- Official Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 28px 24px; text-align: center; border-bottom: 4px solid #f59e0b;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center">
-                    <span style="display: inline-block; background-color: #f59e0b; color: #0f172a; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 9999px; margin-bottom: 10px;">
-                      Official Registration Notice
-                    </span>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
-                      Champion Cricket League
-                    </h1>
-                    <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px; font-weight: 600;">
-                      Powered by Khel Bharat • Season 2 Trials
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Status Alert Bar -->
-          <tr>
-            <td style="background-color: #fffbeb; border-bottom: 1px solid #fef3c7; padding: 14px 24px; text-align: center;">
-              <span style="color: #b45309; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ⏳ Action Required: Complete Payment to Confirm Trial Slot
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1B3E8E 100%); padding: 26px 24px; text-align: center; border-bottom: 4px solid #f59e0b;">
+              <span style="display: inline-block; background-color: #f59e0b; color: #0f172a; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 12px; border-radius: 9999px; margin-bottom: 10px;">
+                Champion Cricket League Trials
               </span>
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: -0.3px;">
+                CCL Registration Received
+              </h1>
+              <p style="margin: 6px 0 0; color: #cbd5e1; font-size: 13px; font-weight: 600;">
+                Khel Bharat | Play. Perform. Get Recognized.
+              </p>
             </td>
           </tr>
 
           <!-- Main Content -->
           <tr>
-            <td style="padding: 28px 24px;">
+            <td style="padding: 28px 26px;">
               <p style="margin: 0 0 14px; font-size: 16px; font-weight: 700; color: #0f172a;">
-                Dear ${data.name},
+                Hi ${data.name}, 🏏
               </p>
-              <p style="margin: 0 0 18px; font-size: 14px; line-height: 1.6; color: #475569;">
-                Thank you for submitting your details for the <strong style="color: #0f172a;">Champion Cricket League Season 2 National Trials</strong>. Your candidate registration details have been received and a provisional trial slot is currently held for you.
-              </p>
-              <p style="margin: 0 0 22px; font-size: 14px; line-height: 1.6; color: #475569;">
-                To lock in your trial date, receive your official digital Admit Card, and confirm your jersey kit, please complete the registration fee payment below.
+              <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.65; color: #334155;">
+                Thank you for registering for the <strong style="color: #0f172a;">Champion Cricket League (CCL) Trials</strong>. Your registration has been successfully received.
               </p>
 
-              <!-- Registration Summary Card -->
+              <!-- Registration Summary Table -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px; overflow: hidden;">
                 <tr>
-                  <td style="background-color: #0f172a; color: #ffffff; padding: 12px 18px; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
-                    Candidate Registration Summary
+                  <td colspan="2" style="background-color: #0f172a; color: #ffffff; padding: 11px 16px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+                    Player Registration Details
                   </td>
-                  <td style="background-color: #0f172a; color: #f59e0b; padding: 12px 18px; font-size: 12px; font-weight: 800; text-align: right; font-family: monospace;">
+                </tr>
+                <tr>
+                  <td width="44%" style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Registration Number:
+                  </td>
+                  <td width="56%" style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #1B3E8E; font-size: 14px; font-weight: 800; font-family: monospace;">
                     ${data.tempId}
                   </td>
                 </tr>
                 <tr>
-                  <td colspan="2" style="padding: 16px 18px;">
-                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 13px;">
-                      <tr>
-                        <td width="40%" style="color: #64748b; font-weight: 600;">Candidate Name:</td>
-                        <td width="60%" style="color: #0f172a; font-weight: 700;">${data.name}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Age & Category:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${data.age} Years (${Number(data.age) < 16 ? 'Under-16 Category' : 'Open / Senior Category'})</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Ball Preference:</td>
-                        <td style="color: #dc2626; font-weight: 700;">${data.ballType} Ball Trial</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Playing Speciality:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${data.speciality}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Trial Center:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${data.city}, ${data.state}</td>
-                      </tr>
-                      <tr style="border-top: 1px dashed #cbd5e1;">
-                        <td style="color: #64748b; font-weight: 600; padding-top: 12px;">Registration Fee:</td>
-                        <td style="color: #1e3a8a; font-weight: 800; font-size: 16px; padding-top: 12px;">₹${fee} <span style="font-size: 11px; font-weight: normal; color: #64748b;">(All Inclusive)</span></td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Status:</td>
-                        <td>
-                          <span style="background-color: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
-                            Payment Pending
-                          </span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Specialty:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${specialtyDisplay}
                   </td>
                 </tr>
-              </table>
-
-              <!-- Payment Guidance Box -->
-              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
-                <h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">
-                  💳 How to Complete Your Payment
-                </h3>
-                <p style="margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #15803d;">
-                  Return to your registration portal or checkout window to pay instantly using any accepted method:
-                </p>
-                <table width="100%" cellpadding="4" cellspacing="0" border="0" style="font-size: 12px; color: #1e293b;">
-                  <tr>
-                    <td style="padding: 4px 0;"><strong>• UPI Apps:</strong> PhonePe, Google Pay, Paytm, BHIM, CRED (Instant confirmation)</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0;"><strong>• Cards & Banking:</strong> Credit/Debit Cards (Visa, Mastercard, RuPay) & Net Banking</td>
-                  </tr>
-                </table>
-              </div>
-
-              <!-- Important Notes -->
-              <div style="border-left: 3px solid #f59e0b; padding-left: 14px; margin-bottom: 24px;">
-                <p style="margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #0f172a;">
-                  Important Guidelines for Candidates:
-                </p>
-                <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #64748b; line-height: 1.6;">
-                  <li>Provisional slot is held for 48 hours from the time of registration.</li>
-                  <li>Original Date of Birth proof (Aadhaar Card / School ID) is mandatory on trial day.</li>
-                  <li>Official Admit Card and trial reporting slot will be issued immediately upon payment.</li>
-                </ul>
-              </div>
-
-              <!-- Support Desk -->
-              <table width="100%" cellpadding="12" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
                 <tr>
-                  <td>
-                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">National Player Support & Assistance:</strong>
-                    Email: <a href="mailto:support@khelbharatofficial.com" style="color: #1e3a8a; text-decoration: none; font-weight: 700;">support@khelbharatofficial.com</a> | 
-                    Helpline: <strong style="color: #0f172a;">011 69311383</strong> | 
-                    WhatsApp: <strong style="color: #0f172a;">+91 8800763536</strong>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Category:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${ageCategory}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    State:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${data.state}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Payment Status:
+                  </td>
+                  <td style="padding: 11px 16px;">
+                    <span style="display: inline-block; background-color: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: 1px solid #fde68a;">
+                      Pending
+                    </span>
                   </td>
                 </tr>
               </table>
 
+              <!-- Payment CTA Section (Button Only — No Raw URL Shown) -->
+              <p style="margin: 0 0 18px; font-size: 14px; line-height: 1.6; color: #334155;">
+                To confirm your registration for upcoming trial slot, please complete your payment by clicking:
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 26px;">
+                <tr>
+                  <td align="center">
+                    <a href="${paymentButtonUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #1B3E8E; color: #ffffff; font-size: 15px; font-weight: 800; text-decoration: none; padding: 14px 32px; border-radius: 10px; border: 2px solid #f59e0b; box-shadow: 0 4px 12px rgba(27,62,142,0.28); letter-spacing: 0.3px;">
+                      Complete Payment – ₹${fee.toLocaleString('en-IN')}/-
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 8px; font-size: 11px; color: #64748b;">
+                    Secure Razorpay Checkout • UPI, Cards &amp; Net Banking Accepted
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Assistance Block -->
+              <div style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; padding: 14px 16px; margin-bottom: 22px; font-size: 12px; line-height: 1.6; color: #475569;">
+                For assistance, contact us at <strong style="color: #0f172a;">01169311383</strong> and <strong style="color: #0f172a;">01169310488</strong>, WhatsApp Only: <strong style="color: #0f172a;">+91 8800763536</strong>, or <a href="mailto:support@khelbharatofficial.com" style="color: #1B3E8E; font-weight: 700; text-decoration: none;">support@khelbharatofficial.com</a>
+                <br>
+                <span style="color: #64748b; font-weight: 600;">Monday to Saturday | 10:00 AM – 7:00 PM</span>
+              </div>
+
+              <!-- Sign Off -->
+              <p style="margin: 0; font-size: 13px; line-height: 1.65; color: #334155;">
+                Best regards,<br>
+                <strong style="color: #0f172a;">Team Champion Cricket League</strong><br>
+                <span style="color: #1B3E8E; font-weight: 700;">Khel Bharat | Play. Perform. Get Recognized.</span>
+              </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color: #0f172a; color: #94a3b8; padding: 20px 24px; text-align: center; font-size: 11px; line-height: 1.6; border-top: 1px solid #1e293b;">
-              <p style="margin: 0 0 4px; font-weight: 700; color: #e2e8f0;">
-                Champion Cricket League (CCL) • Powered by Khel Bharat
-              </p>
-              <p style="margin: 0; color: #64748b;">
-                Sent from official automated system: <span style="color: #f59e0b;">registration@khelbharatofficial.com</span>
-              </p>
-              <p style="margin: 6px 0 0; color: #475569; font-size: 10px;">
-                This is an automated operational notification regarding your Season 2 registration.
-              </p>
+            <td style="background-color: #0f172a; color: #94a3b8; padding: 16px 24px; text-align: center; font-size: 11px; border-top: 1px solid #1e293b;">
+              Champion Cricket League (CCL) • Powered by Khel Bharat • Official Automated Notice
             </td>
           </tr>
 
@@ -509,7 +531,7 @@ Player Operations Board,
 Champion Cricket League (CCL)
 Powered by Khel Bharat
 Official Support: support@khelbharatofficial.com
-Helpline: 011 69311383 | WhatsApp: +91 8800763536
+Helpline: 01169311383, 01169310488 (Monday to Saturday | 10:00 AM – 7:00 PM) | WhatsApp Only: +91 8800763536
 `.trim();
 
   const htmlBody = `
@@ -611,6 +633,7 @@ Helpline: 011 69311383 | WhatsApp: +91 8800763536
 export const sendEmailToCandidate = (data: {
   name: string;
   email: string;
+  age?: string | number;
   registrationNumber: string;
   ballType: string;
   speciality: string;
@@ -622,62 +645,38 @@ export const sendEmailToCandidate = (data: {
   feeAmount?: number;
 }): CandidateRegistrationEmail => {
   const fee = data.feeAmount || calculateRegistrationFee(data.ballType as any, data.speciality);
-  const subject = `Registration Confirmed - Season 2 Trials [${data.registrationNumber}]`;
+  const ageCategory = getAgeCategoryLabel(data.age);
+  const specialtyDisplay = `${data.speciality} (${data.ballType} Ball)`;
+  const subject = `CCL Registration Confirmed – Payment Received [${data.registrationNumber}]`;
   const qrCode = `QR-${data.registrationNumber.slice(-6)}`;
 
   const emailBody = `
-From: Champion Cricket League <registration@khelbharatofficial.com>
-Reply-To: support@khelbharatofficial.com
-To: ${data.name} <${data.email}>
 Subject: ${subject}
 
-Dear ${data.name},
+Hi ${data.name}, 🏏
 
-Registration Confirmed - Your trial slot has been reserved successfully. A confirmation email will be sent to your email ID within 24 hours.
+Congratulations! Your payment of ₹${fee.toLocaleString('en-IN')}/- has been successfully received, and your registration for the Champion Cricket League (CCL) Trials is CONFIRMED.
 
-Congratulations! Your payment of ₹${fee} has been successfully verified, and your registration for Champion Cricket League Season 2 National Trials is officially CONFIRMED.
-
-==================================================
-        OFFICIAL TRIAL ADMIT CARD
-==================================================
-Registration Number : ${data.registrationNumber}
-Candidate Full Name : ${data.name}
-Ball Preference     : ${data.ballType} Ball Trial
-Playing Speciality  : ${data.speciality}
-Trial Venue / City  : ${data.city}, ${data.state}
-Reporting Time Slot : ${data.reportingTime}
-Payment Status      : PAID (CONFIRMED)
-Razorpay Payment ID : ${data.paymentId}
-Verification QR     : ${qrCode}
-==================================================
-
-CCL 100-POINT MERIT CALCULATOR EVALUATION:
-Your trial match and nets performance will be evaluated based on the official CCL merit points system:
-- 1 Run      = 1 Point
-- 1 Wicket   = 20 Points
-- 1 Runout   = 5 Points
-- 1 Catch    = 5 Points
-- 1 Stumping = 10 Points
+Registration Number: ${data.registrationNumber}
+Specialty: ${specialtyDisplay}
+Category: ${ageCategory}
+State: ${data.state}
+Trial City / Hub: ${data.city}
+Reporting Time Slot: ${data.reportingTime}
+Payment Status: Paid (Confirmed)
+Payment ID: ${data.paymentId}
 
 MANDATORY REPORTING GUIDELINES:
-1. Carry your original Date of Birth proof (Aadhaar Card / School Leaving Certificate). Age eligibility: 8 to 35 years.
+1. Carry your original Date of Birth proof (Aadhaar Card / School Leaving Certificate). Age eligibility: 10 to 35 years.
 2. Report in cricket whites or appropriate sports attire 30 minutes prior to your reporting slot.
 3. Bring your personal cricket equipment (Bat, batting pads, gloves, or wicketkeeping gear).
-4. Official trial jersey and match videography identification bib will be issued at the registration desk.
 
-CARRIER PATHWAY:
-Trials → Selection → Competitive Matches → Camps → Advanced League Stages
+For assistance, contact us at 01169311383 and 01169310488 or support@khelbharatofficial.com (WhatsApp Only: +91 8800763536)
+Monday to Saturday | 10:00 AM – 7:00 PM
 
-For queries or immediate support, contact our National Helpdesk:
-Email: support@khelbharatofficial.com
-Helpline: 011 69311383
-WhatsApp: +91 8800763536
-
-Best wishes for your trials!
-Management Board,
-Champion Cricket League (CCL)
-Powered by Khel Bharat
-www.khelbharatofficial.com
+Best regards,
+Team Champion Cricket League
+Khel Bharat | Play. Perform. Get Recognized.
 `.trim();
 
   const htmlBody = `
@@ -689,198 +688,146 @@ www.khelbharatofficial.com
   <title>${subject}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0b1120; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0b1120; padding: 24px 12px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0b1120; padding: 28px 12px;">
     <tr>
       <td align="center">
-        <!-- Container -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 640px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.35); border: 1px solid #1e293b;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 12px 28px rgba(0,0,0,0.35); border: 1px solid #1e293b;">
           
           <!-- Header Banner -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 30px 24px; text-align: center; border-bottom: 4px solid #10b981;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <td style="background: linear-gradient(135deg, #0f172a 0%, #1B3E8E 100%); padding: 28px 24px; text-align: center; border-bottom: 4px solid #10b981;">
+              <span style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 14px; border-radius: 9999px; margin-bottom: 10px;">
+                ✓ Payment Confirmed • Slot Reserved
+              </span>
+              <h1 style="margin: 0; color: #ffffff; font-size: 23px; font-weight: 900; letter-spacing: -0.3px;">
+                Champion Cricket League
+              </h1>
+              <p style="margin: 5px 0 0; color: #cbd5e1; font-size: 13px; font-weight: 600;">
+                Khel Bharat | Play. Perform. Get Recognized.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding: 28px 26px;">
+              <p style="margin: 0 0 14px; font-size: 16px; font-weight: 800; color: #0f172a;">
+                Hi ${data.name}, 🏏
+              </p>
+              <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.65; color: #334155;">
+                Congratulations! Your payment of <strong style="color: #065f46;">₹${fee.toLocaleString('en-IN')}/-</strong> has been verified and your registration for the <strong style="color: #0f172a;">Champion Cricket League (CCL) Trials</strong> is officially <strong style="color: #065f46;">CONFIRMED</strong>.
+              </p>
+
+              <!-- Official Registration & Admit Summary -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 12px; border: 2px dashed #1B3E8E; margin-bottom: 24px; overflow: hidden;">
                 <tr>
-                  <td align="center">
-                    <span style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 14px; border-radius: 9999px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(16,185,129,0.3);">
-                      ✓ Payment Verified • Confirmed
+                  <td style="background-color: #0f172a; color: #ffffff; padding: 12px 16px; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+                    Official Trial Admit Card
+                  </td>
+                  <td align="right" style="background-color: #0f172a; color: #f59e0b; padding: 12px 16px; font-size: 13px; font-weight: 900; font-family: monospace;">
+                    ${data.registrationNumber}
+                  </td>
+                </tr>
+                <tr>
+                  <td width="44%" style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Player Name:
+                  </td>
+                  <td width="56%" style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 800;">
+                    ${data.name}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Registration Number:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #1B3E8E; font-size: 13px; font-weight: 800; font-family: monospace;">
+                    ${data.registrationNumber}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Specialty:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${specialtyDisplay}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Category:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${ageCategory}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    State &amp; Trial Hub:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 13px; font-weight: 700;">
+                    ${data.city}, ${data.state}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Reporting Time:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #1B3E8E; font-size: 13px; font-weight: 800;">
+                    ${data.reportingTime}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Payment Status:
+                  </td>
+                  <td style="padding: 11px 16px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="display: inline-block; background-color: #ecfdf5; color: #065f46; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; border: 1px solid #a7f3d0;">
+                      Paid (Confirmed) • ₹${fee.toLocaleString('en-IN')}
                     </span>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">
-                      Champion Cricket League
-                    </h1>
-                    <p style="margin: 5px 0 0; color: #fbbf24; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">
-                      Season 2 National Trials • Official Admit Card
-                    </p>
                   </td>
                 </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Required User Notice Banner -->
-          <tr>
-            <td style="background-color: #ecfdf5; border-bottom: 1px solid #a7f3d0; padding: 16px 24px; text-align: center;">
-              <p style="margin: 0; font-size: 13px; font-weight: 800; color: #065f46; line-height: 1.5;">
-                Registration Confirmed - Your trial slot has been reserved successfully. A confirmation email will be sent to your email ID within 24 hours.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding: 28px 24px;">
-              <p style="margin: 0 0 16px; font-size: 16px; font-weight: 800; color: #0f172a;">
-                Congratulations, ${data.name}!
-              </p>
-              <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #475569;">
-                Your payment has been successfully verified and settled. Below is your official <strong style="color: #0f172a;">Digital Trial Admit Card</strong>. Please preserve this email and keep your Registration Number handy during trial day reporting.
-              </p>
-
-              <!-- OFFICIAL ADMIT CARD CONTAINER -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 14px; border: 2px dashed #1e3a8a; margin-bottom: 24px; overflow: hidden;">
-                <!-- Admit Card Header -->
                 <tr>
-                  <td style="background-color: #0f172a; padding: 14px 20px; border-bottom: 2px solid #334155;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td>
-                          <span style="color: #f59e0b; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; display: block;">
-                            Official Candidate Pass
-                          </span>
-                          <span style="color: #ffffff; font-size: 14px; font-weight: 800;">
-                            Season 2 Trials Admit Card
-                          </span>
-                        </td>
-                        <td align="right">
-                          <span style="color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; display: block;">
-                            Reg Number
-                          </span>
-                          <span style="color: #ffffff; font-family: monospace; font-size: 13px; font-weight: 900; background-color: #1e293b; padding: 3px 8px; border-radius: 4px; border: 1px solid #475569;">
-                            ${data.registrationNumber}
-                          </span>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="padding: 11px 16px; color: #64748b; font-size: 13px; font-weight: 600;">
+                    Payment ID / QR:
                   </td>
-                </tr>
-
-                <!-- Details Grid -->
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 13px;">
-                      <tr>
-                        <td width="38%" style="color: #64748b; font-weight: 600;">Candidate Name:</td>
-                        <td width="62%" style="color: #0f172a; font-weight: 800; font-size: 14px;">${data.name}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Ball Category:</td>
-                        <td style="color: #dc2626; font-weight: 800;">${data.ballType} Ball Trial</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Playing Specialty:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${data.speciality}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Trial Venue / City:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${data.city}, ${data.state}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Reporting Slot:</td>
-                        <td style="color: #1e3a8a; font-weight: 800;">${data.reportingTime}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Payment Status:</td>
-                        <td>
-                          <span style="background-color: #ecfdf5; color: #065f46; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0;">
-                            PAID (CONFIRMED) • ₹${fee}
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Razorpay Txn ID:</td>
-                        <td style="color: #475569; font-family: monospace; font-size: 12px;">${data.paymentId}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 600;">Verification Token:</td>
-                        <td style="color: #1e3a8a; font-weight: 800; font-family: monospace;">${qrCode}</td>
-                      </tr>
-                    </table>
+                  <td style="padding: 11px 16px; color: #475569; font-size: 12px; font-family: monospace;">
+                    ${data.paymentId} • ${qrCode}
                   </td>
                 </tr>
               </table>
 
-              <!-- CCL 100-Point Merit Calculator Info -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; border-radius: 12px; margin-bottom: 24px; padding: 16px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td>
-                    <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
-                      📊 CCL 100-Point Merit Evaluation System
-                    </h4>
-                    <p style="margin: 0 0 10px; font-size: 12px; color: #475569; line-height: 1.5;">
-                      During trials and match simulations, players earn evaluation points directly based on on-field performance:
-                    </p>
-                    <table width="100%" cellpadding="6" cellspacing="0" border="0" style="font-size: 12px; text-align: center;">
-                      <tr style="background-color: #ffffff; font-weight: 700;">
-                        <td style="border: 1px solid #e2e8f0; border-radius: 6px 0 0 6px; padding: 8px 4px;">1 Run<br><span style="color: #1e3a8a; font-weight: 800;">1 Point</span></td>
-                        <td style="border: 1px solid #e2e8f0; padding: 8px 4px;">1 Wicket<br><span style="color: #dc2626; font-weight: 800;">20 Points</span></td>
-                        <td style="border: 1px solid #e2e8f0; padding: 8px 4px;">1 Runout<br><span style="color: #d97706; font-weight: 800;">5 Points</span></td>
-                        <td style="border: 1px solid #e2e8f0; padding: 8px 4px;">1 Catch<br><span style="color: #16a34a; font-weight: 800;">5 Points</span></td>
-                        <td style="border: 1px solid #e2e8f0; border-radius: 0 6px 6px 0; padding: 8px 4px;">1 Stumping<br><span style="color: #7c3aed; font-weight: 800;">10 Points</span></td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Reporting Guidelines -->
-              <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
-                <h4 style="margin: 0 0 10px; font-size: 13px; font-weight: 800; color: #92400e; text-transform: uppercase;">
-                  ⚠️ Mandatory Trial Reporting Checklist:
+              <!-- Mandatory Checklist -->
+              <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 16px; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 8px; font-size: 12px; font-weight: 800; color: #92400e; text-transform: uppercase;">
+                  Mandatory Trial Reporting Checklist
                 </h4>
                 <ol style="margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.6; color: #78350f;">
-                  <li><strong>Original Date of Birth Proof:</strong> Carry Aadhaar Card or School Leaving Certificate. (Age criteria: 8 to 35 years).</li>
-                  <li><strong>Dress Code:</strong> Report in cricket whites or appropriate sports attire 30 minutes prior to reporting slot.</li>
-                  <li><strong>Equipment:</strong> Bring your personal cricket equipment (Bat, batting pads, gloves, or wicketkeeping gloves).</li>
-                  <li><strong>Jersey & Videography:</strong> Official trial jersey and match videography bib will be provided at the verification counter.</li>
+                  <li>Carry original Date of Birth proof (Aadhaar Card or School Leaving Certificate). Age limit: 10 to 35 years.</li>
+                  <li>Report in cricket whites or sports attire 30 minutes prior to your reporting slot.</li>
+                  <li>Bring your personal cricket kit (bat, pads, gloves, or wicketkeeping gear).</li>
                 </ol>
               </div>
 
-              <!-- Pathway Summary -->
-              <div style="text-align: center; padding: 12px 16px; background-color: #0f172a; border-radius: 10px; margin-bottom: 24px;">
-                <span style="font-size: 11px; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px;">
-                  Your Cricket Pathway
-                </span>
-                <span style="font-size: 12px; font-weight: 700; color: #ffffff;">
-                  Trials ➔ Selection ➔ Competitive Matches ➔ Camps ➔ Advanced League
-                </span>
+              <!-- Assistance Block -->
+              <div style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; padding: 14px 16px; margin-bottom: 22px; font-size: 12px; line-height: 1.6; color: #475569;">
+                For assistance, contact us at <strong style="color: #0f172a;">01169311383</strong> and <strong style="color: #0f172a;">01169310488</strong>, WhatsApp Only: <strong style="color: #0f172a;">+91 8800763536</strong>, or <a href="mailto:support@khelbharatofficial.com" style="color: #1B3E8E; font-weight: 700; text-decoration: none;">support@khelbharatofficial.com</a>
+                <br>
+                <span style="color: #64748b; font-weight: 600;">Monday to Saturday | 10:00 AM – 7:00 PM</span>
               </div>
 
-              <!-- Helpdesk Contact -->
-              <table width="100%" cellpadding="12" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
-                <tr>
-                  <td>
-                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">Player Helpdesk & Assistance:</strong>
-                    Email: <a href="mailto:support@khelbharatofficial.com" style="color: #1e3a8a; text-decoration: none; font-weight: 700;">support@khelbharatofficial.com</a> | 
-                    Helpline: <strong style="color: #0f172a;">011 69311383</strong> | 
-                    WhatsApp: <strong style="color: #0f172a;">+91 8800763536</strong>
-                  </td>
-                </tr>
-              </table>
-
+              <!-- Sign Off -->
+              <p style="margin: 0; font-size: 13px; line-height: 1.65; color: #334155;">
+                Best regards,<br>
+                <strong style="color: #0f172a;">Team Champion Cricket League</strong><br>
+                <span style="color: #1B3E8E; font-weight: 700;">Khel Bharat | Play. Perform. Get Recognized.</span>
+              </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color: #0f172a; color: #94a3b8; padding: 22px 24px; text-align: center; font-size: 11px; line-height: 1.6; border-top: 1px solid #1e293b;">
-              <p style="margin: 0 0 4px; font-weight: 800; color: #ffffff;">
-                Champion Cricket League • Powered by Khel Bharat
-              </p>
-              <p style="margin: 0; color: #64748b;">
-                Sent from official system: <span style="color: #f59e0b;">registration@khelbharatofficial.com</span>
-              </p>
-              <p style="margin: 6px 0 0; color: #475569; font-size: 10px;">
-                Copyright © 2026 Champion Cricket League. All rights reserved.
-              </p>
+            <td style="background-color: #0f172a; color: #94a3b8; padding: 18px 24px; text-align: center; font-size: 11px; border-top: 1px solid #1e293b;">
+              Champion Cricket League (CCL) • Powered by Khel Bharat • Copyright © 2026
             </td>
           </tr>
 
@@ -1019,10 +966,11 @@ Champion Cricket League Payment Automation Engine
 
   console.log(`[EMAIL DISPATCHED TO COMPANY OWNER -> ${COMPANY_OWNER_EMAIL}]`, record);
   dispatchRealEmailViaApi({
-    to: `${COMPANY_OWNER_EMAIL}, ${GMAIL_BACKUP_NOTIFICATION_EMAIL}`,
+    to: COMPANY_OWNER_EMAIL,
     subject,
     text: emailBody,
-    replyTo: data.candidateEmail
+    replyTo: data.candidateEmail,
+    isOwnerNotification: true
   });
   return record;
 };

@@ -12,7 +12,7 @@ export const StatsCounter: React.FC = () => {
     },
     {
       icon: Trophy,
-      number: '800+',
+      number: '500+',
       label: 'Matches Played',
       detail: 'State, regional & national tournaments',
       badge: 'High Action'
@@ -26,16 +26,16 @@ export const StatsCounter: React.FC = () => {
     },
     {
       icon: Users,
-      number: '50,000+',
+      number: '10,000+',
       label: 'Cricketers Scouted',
-      detail: 'U-16, U-19 & Open division aspirants',
+      detail: 'U-14, U-16 & Open Division (Aspirants)',
       badge: 'Grassroots Talent'
     },
     {
       icon: Star,
       number: '4.9 / 5',
       label: 'Trust Rating',
-      detail: 'Over 12,000+ verified player reviews',
+      detail: 'Given by 1000+ verified players',
       badge: 'Top Rated'
     }
   ];

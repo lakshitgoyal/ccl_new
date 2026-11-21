@@ -13,8 +13,6 @@ import {
   Trophy,
   Mail,
   Instagram,
-  Twitter,
-  Linkedin,
   Facebook,
   Youtube
 } from 'lucide-react';
@@ -69,7 +67,7 @@ export const Footer: React.FC<FooterProps> = ({
                     className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"
                   >
                     <ChevronRight className="w-3 h-3 text-slate-600" />
-                    <span>State Teams & Franchises</span>
+                    <span>State Teams</span>
                   </button>
                 </li>
                 <li>
@@ -289,18 +287,23 @@ export const Footer: React.FC<FooterProps> = ({
                 className="flex items-center gap-2 text-slate-300 hover:text-green-400 transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-green-400 shrink-0" />
-                <span>WhatsApp: +91 8800763536</span>
+                <span>WhatsApp Only: +91 8800763536</span>
               </a>
-              <a 
-                href="tel:01169311383" 
-                className="flex items-center gap-2 text-slate-300 hover:text-blue-300 transition-colors"
-              >
-                <Phone className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>Helpline: 011 69311383</span>
-              </a>
+              <div className="flex items-start gap-2 text-slate-300 sm:col-span-2">
+                <Phone className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    <span>Helpline:</span>
+                    <a href="tel:01169311383" className="hover:text-blue-300 transition-colors">01169311383</a>
+                    <span>,</span>
+                    <a href="tel:01169310488" className="hover:text-blue-300 transition-colors">01169310488</a>
+                  </span>
+                  <span className="text-[11px] text-slate-400">Monday to Saturday | 10:00 AM – 7:00 PM</span>
+                </div>
+              </div>
               <div className="flex items-start gap-2 text-slate-400 sm:col-span-2">
                 <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span>Head Office: Building no. 13 Suraj vihar 1st floor beside Triumph Dwarka (New Delhi -110078)</span>
+                <span>Head Office: Building number 13, Beside Triumph Showroom, Dwarka, Delhi -110078</span>
               </div>
             </div>
 
@@ -311,7 +314,7 @@ export const Footer: React.FC<FooterProps> = ({
               </span>
               <div className="flex flex-wrap items-center gap-2.5">
                 <a
-                  href="https://www.instagram.com/official_khel_bharat?igsh=MTN3Zml0bmtkbjkxdQ%3D%3D"
+                  href="https://www.instagram.com/official_khel_bharat"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-pink-500 hover:text-pink-400 text-slate-300 text-xs font-semibold transition-all group"
@@ -322,29 +325,18 @@ export const Footer: React.FC<FooterProps> = ({
                 </a>
 
                 <a
-                  href="https://x.com/CCL_IND"
+                  href="https://youtube.com/@champion_cricket_league_ccl?si=YjN922e-EPyH2rRK"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-sky-400 hover:text-sky-300 text-slate-300 text-xs font-semibold transition-all group"
-                  aria-label="Twitter / X"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 text-xs font-semibold transition-all group"
+                  aria-label="YouTube"
                 >
-                  <Twitter className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                  <span>Twitter / X</span>
+                  <Youtube className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
+                  <span>YouTube</span>
                 </a>
 
                 <a
-                  href="https://www.linkedin.com/company/champion-cricket-league"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-blue-500 hover:text-blue-400 text-slate-300 text-xs font-semibold transition-all group"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
-                  <span>LinkedIn</span>
-                </a>
-
-                <a
-                  href="https://www.facebook.com/share/ZcPYAj9NXQmknsGj/?mibextid=LQQJ4d"
+                  href="https://www.facebook.com/share/19ysXo82Ar/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-blue-600 hover:text-blue-400 text-slate-300 text-xs font-semibold transition-all group"
@@ -355,14 +347,27 @@ export const Footer: React.FC<FooterProps> = ({
                 </a>
 
                 <a
-                  href="https://youtube.com/@champion_cricket_league_ccl?si=IrIeZfoINayHkbXN"
+                  href="https://www.threads.com/@official_khel_bharat"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-red-500 hover:text-red-400 text-slate-300 text-xs font-semibold transition-all group"
-                  aria-label="YouTube"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-400 hover:text-white text-slate-300 text-xs font-semibold transition-all group"
+                  aria-label="Threads"
                 >
-                  <Youtube className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
-                  <span>YouTube</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4 h-4 text-slate-200 group-hover:scale-110 transition-transform"
+                    aria-hidden="true"
+                  >
+                    <path d="M19 12a7 7 0 1 0-2.5 5.36" />
+                    <path d="M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" />
+                    <path d="M15.5 12v1.5a2.5 2.5 0 0 0 5 0V12" />
+                  </svg>
+                  <span>Threads</span>
                 </a>
               </div>
             </div>
@@ -394,7 +399,7 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <button onClick={() => onNavigate('teams')} className="hover:text-white transition-colors cursor-pointer text-left">
-                  State Franchises & Teams
+                  State Teams
                 </button>
               </li>
               <li>

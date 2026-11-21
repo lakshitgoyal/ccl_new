@@ -215,8 +215,9 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
           </div>
 
           {/* Support Footer */}
-          <div className="text-center text-[11px] text-slate-500 pt-1">
-            <span>Official Helpdesk: <strong>support@khelbharatofficial.com</strong> • 011 69311383</span>
+          <div className="text-center text-[11px] text-slate-500 pt-1 space-y-0.5">
+            <div>Official Helpdesk: <strong>support@khelbharatofficial.com</strong> • 01169311383, 01169310488</div>
+            <div className="text-[10px] text-slate-400">Monday to Saturday | 10:00 AM – 7:00 PM</div>
           </div>
 
         </div>

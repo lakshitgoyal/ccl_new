@@ -10,7 +10,7 @@ export const StateLeaguePage: React.FC<StateLeaguePageProps> = ({ onRegister }) 
   return (
     <div className="py-12 bg-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-8">
-        <div className="max-w-3xl mb-12">
+        <div className="max-w-3xl mb-10">
           <span className="text-xs font-bold text-[#1B3E8E] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full inline-block mb-3">
             State Tournament
           </span>
@@ -20,6 +20,15 @@ export const StateLeaguePage: React.FC<StateLeaguePageProps> = ({ onRegister }) 
           <p className="text-base text-slate-600 leading-relaxed font-normal">
             Champion Cricket League (CCL) State Tournament brings together selected players and state teams to compete in an organized cricket championship. Players get the opportunity to showcase their skills, compete at a higher level, and gain match experience, with live YouTube broadcasts and commentary for every match. Tournament facilities and player support are provided as per the applicable guidelines.
           </p>
+        </div>
+
+        {/* Tournament Journey - 5 Simple Steps Infographic */}
+        <div className="mb-14 rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-white">
+          <img
+            src="/assets/aistudio/WhatsApp_Image_2026-11-16_at_17.14.56_6fae8abb.jpeg"
+            alt="Champion Cricket League Tournament Journey - Only 5 Simple Steps: Trials, State League Match, Quarter Final, Semi Final, Final"
+            className="w-full h-auto object-contain block"
+          />
         </div>
 
         {/* Feature Cards Grid */}
@@ -85,24 +94,16 @@ export const StateLeaguePage: React.FC<StateLeaguePageProps> = ({ onRegister }) 
           </div>
         </div>
 
-        {/* Banner with image */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl mb-12">
-          <img
-            src="/assets/images/three.png"
-            alt="Cricket Tournament Action"
-            className="w-full h-80 object-cover filter brightness-50"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/assets/images/one.png';
-            }}
-          />
-          <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 text-white">
+        {/* Clean CTA Banner without background image */}
+        <div className="rounded-3xl overflow-hidden shadow-xl mb-12 bg-gradient-to-br from-[#0f172a] via-[#1B3E8E] to-[#0f172a] border border-blue-900/40">
+          <div className="flex flex-col justify-center items-center text-center px-6 py-14 sm:py-16 text-white">
             <h3 className="text-2xl sm:text-4xl font-black mb-3">Earn Your State Jersey</h3>
             <p className="max-w-xl text-xs sm:text-sm text-slate-200 mb-6">
               Represent Delhi, Gujarat, Punjab, Haryana, or Uttar Pradesh in the championship arena.
             </p>
             <button
               onClick={() => onRegister('Leather')}
-              className="px-8 py-3.5 bg-red-600 hover:bg-red-500 text-white font-extrabold rounded-xl shadow-lg transition-all"
+              className="px-8 py-3.5 bg-red-600 hover:bg-red-500 text-white font-extrabold rounded-xl shadow-lg transition-all cursor-pointer"
             >
               Start Trial Registration Now
             </button>

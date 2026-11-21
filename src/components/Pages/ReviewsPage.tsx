@@ -66,7 +66,7 @@ export const ReviewsPage: React.FC = () => {
                 <Star key={i} className="w-5 h-5 fill-current" />
               ))}
             </div>
-            <p className="text-xs text-slate-400">Based on 12,480+ player and parent surveys</p>
+            <p className="text-xs text-slate-400">Based on 1000+ verified player reviews</p>
           </div>
 
           <div className="md:col-span-2 space-y-2 text-xs">

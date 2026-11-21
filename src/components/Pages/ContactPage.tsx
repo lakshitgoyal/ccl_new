@@ -48,29 +48,28 @@ export const ContactPage: React.FC = () => {
                   <MessageCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500 font-medium">WhatsApp Support</span>
+                  <span className="text-xs text-slate-500 font-medium">Official WhatsApp (WhatsApp Only)</span>
                   <div className="text-sm font-bold text-slate-900 group-hover:text-green-600 transition-colors">
                     +91 8800763536
                   </div>
-                  <span className="text-[11px] text-slate-400">Instant trial assistance</span>
+                  <span className="text-[11px] text-slate-400">WhatsApp number only • Instant trial assistance</span>
                 </div>
               </a>
 
-              <a
-                href="tel:01169311383"
-                className="flex items-start gap-3 p-3 rounded-xl bg-white border border-slate-200 hover:border-blue-500 transition-colors group"
-              >
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-white border border-slate-200 hover:border-blue-500 transition-colors group">
                 <div className="w-10 h-10 rounded-lg bg-blue-100 text-[#1B3E8E] flex items-center justify-center shrink-0">
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
                   <span className="text-xs text-slate-500 font-medium">Central Helpline</span>
-                  <div className="text-sm font-bold text-slate-900 group-hover:text-[#1B3E8E] transition-colors">
-                    011 69311383
+                  <div className="text-sm font-bold text-slate-900 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <a href="tel:01169311383" className="hover:text-[#1B3E8E] transition-colors">01169311383</a>
+                    <span className="text-slate-300">|</span>
+                    <a href="tel:01169310488" className="hover:text-[#1B3E8E] transition-colors">01169310488</a>
                   </div>
-                  <span className="text-[11px] text-slate-400">Mon-Sat (9:30 AM - 6:30 PM)</span>
+                  <span className="text-[11px] text-slate-400">Monday to Saturday | 10:00 AM – 7:00 PM</span>
                 </div>
-              </a>
+              </div>
 
               <a
                 href="mailto:support@khelbharatofficial.com"
@@ -97,7 +96,7 @@ export const ContactPage: React.FC = () => {
               </div>
               <p className="text-xs text-slate-600 leading-relaxed pl-6">
                 Champion Cricket League Office<br />
-                Building no. 13 Suraj vihar 1st floor beside Triumph Dwarka (New Delhi -110078)
+                Building number 13, Beside Triumph Showroom, Dwarka, Delhi -110078
               </p>
             </div>
           </div>
