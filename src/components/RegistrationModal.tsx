@@ -8,7 +8,9 @@ import {
   Printer, 
   AlertCircle,
   Key,
-  CreditCard
+  CreditCard,
+  Copy,
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BallType, PlayerSpeciality, RegistrationFormData, RegistrationRecord } from '../types';
@@ -103,6 +105,17 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   
   const [completedRecord, setCompletedRecord] = useState<RegistrationRecord | null>(null);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const handleCopyUpi = () => {
+    try {
+      navigator.clipboard?.writeText('Pos.11373759@indus');
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2000);
+    } catch {
+      // ignore clipboard errors
+    }
+  };
 
   useEffect(() => {
     const key = getStoredRazorpayKey();
@@ -718,44 +731,93 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </label>
                 </div>
 
-                {/* UPI Apps Payment Method Banner */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                {/* Official UPI QR Code & Accepted Payment Methods */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                      Accepted Payment Methods (UPI Apps & Cards):
+                      Official Payment QR &amp; Accepted Methods (UPI &amp; Cards)
                     </span>
                     <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       ⚡ Instant Verification
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-900 text-xs font-bold shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-[#5f259f]"></span>
-                      PhonePe
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-[#4285F4]"></span>
-                      Google Pay
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-xs font-bold shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-[#00BAF2]"></span>
-                      Paytm
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-[#00897B]"></span>
-                      BHIM
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 border border-neutral-300 text-neutral-900 text-xs font-bold shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-black"></span>
-                      CRED
-                    </span>
-                    <span className="text-[11px] text-slate-500 font-medium pl-1">
-                      + Net Banking & Cards
-                    </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                    <div className="sm:col-span-5 flex justify-center">
+                      <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-sm w-48 sm:w-full max-w-[210px]">
+                        <img
+                          src="/assets/aistudio/WhatsApp_Image_2026-11-21_at_17.57.51_8b216b70.jpeg"
+                          alt="IndusInd Bank Khel Bharat Scan and Pay UPI QR Code"
+                          className="w-full h-auto object-contain rounded-lg block"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-7 space-y-2.5">
+                      <div>
+                        <p className="text-xs font-extrabold text-slate-900">
+                          Scan &amp; Pay via UPI — Khel Bharat (IndusInd Bank)
+                        </p>
+                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                          Scan the official QR code with any UPI app or click <strong>Proceed to Pay</strong> below to complete payment via Razorpay checkout.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Official UPI ID
+                          </span>
+                          <span className="font-mono text-xs font-extrabold text-[#1B3E8E] break-all">
+                            Pos.11373759@indus
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCopyUpi}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold transition-colors shrink-0 cursor-pointer"
+                        >
+                          {copiedUpi ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-900 text-xs font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-[#5f259f]"></span>
+                          PhonePe
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-[#4285F4]"></span>
+                          Google Pay
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-xs font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-[#00BAF2]"></span>
+                          Paytm
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-[#00897B]"></span>
+                          BHIM
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 border border-neutral-300 text-neutral-900 text-xs font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-black"></span>
+                          CRED
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium pl-1">
+                          + Net Banking &amp; Cards
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Supports all major UPI Apps – PhonePe, Google Pay, Paytm, BHIM, CRED for fast, secure slot confirmation.
-                  </p>
                 </div>
 
                 {/* Submission CTA Strip with Dynamic Fee */}
@@ -848,6 +910,35 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   <span className="font-black text-base text-[#1B3E8E]">
                     ₹{calculateRegistrationFee(ballType, formData.speciality || 'Batsman').toLocaleString('en-IN')}/-
                   </span>
+                </div>
+              </div>
+
+              {/* Official UPI QR Code on Resume Payment Step */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-sm w-44 shrink-0">
+                  <img
+                    src="/assets/aistudio/WhatsApp_Image_2026-11-21_at_17.57.51_8b216b70.jpeg"
+                    alt="IndusInd Bank Khel Bharat Scan and Pay UPI QR Code"
+                    className="w-full h-auto object-contain rounded-lg block"
+                  />
+                </div>
+                <div className="space-y-2 text-center sm:text-left">
+                  <p className="text-xs font-extrabold text-slate-900">
+                    Official Khel Bharat UPI QR (IndusInd Bank)
+                  </p>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    You can pay via Razorpay below or scan this official QR code directly using PhonePe, Google Pay, Paytm, or BHIM.
+                  </p>
+                  <div className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+                    <span className="font-mono text-xs font-extrabold text-[#1B3E8E]">Pos.11373759@indus</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="text-[11px] font-bold text-slate-700 hover:text-[#1B3E8E] cursor-pointer"
+                    >
+                      {copiedUpi ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -31,11 +31,11 @@ export const SelectionRoadmap: React.FC<SelectionRoadmapProps> = ({
     },
     {
       number: '02',
-      title: 'State League Matches',
-      icon: Target,
-      color: 'bg-emerald-600',
-      description: 'Every shortlisted player plays guaranteed matches: Two 25-over matches for U16 and Two 20-over matches for Open league. All scores and wickets tracked live on Cricheroes.',
-      highlight: 'Custom named jersey, full kit, stay & nutritious meals provided by Khel Bharat.'
+      title: '100-Point Selection Rule',
+      icon: Calculator,
+      color: 'bg-indigo-600',
+      description: 'Zero bias, zero subjective politics. Score points based strictly on performance: 1 Run = 1 Pt, 1 Wicket = 20 Pts, 1 Catch = 5 Pts, 1 Stumping = 10 Pts, 1 Runout = 5 Pts.',
+      highlight: 'Score minimum 100 points in 2 matches to advance directly to the National Squad.'
     },
     {
       number: '03',
@@ -47,11 +47,11 @@ export const SelectionRoadmap: React.FC<SelectionRoadmapProps> = ({
     },
     {
       number: '04',
-      title: '100-Point Selection Rule',
-      icon: Calculator,
-      color: 'bg-indigo-600',
-      description: 'Zero bias, zero subjective politics. Score points based strictly on performance: 1 Run = 1 Pt, 1 Wicket = 20 Pts, 1 Catch = 5 Pts, 1 Stumping = 10 Pts, 1 Runout = 5 Pts.',
-      highlight: 'Score minimum 100 points in 2 matches to advance directly to the National Squad.'
+      title: 'State League Matches',
+      icon: Target,
+      color: 'bg-emerald-600',
+      description: 'Every shortlisted player plays guaranteed matches: Two 25-over matches for U16 and Two 20-over matches for Open league. All scores and wickets tracked live on Cricheroes.',
+      highlight: 'Custom named jersey, full kit, stay & nutritious meals provided by Khel Bharat.'
     },
     {
       number: '05',

@@ -65,54 +65,15 @@ export const SelectionProcessPage: React.FC<SelectionProcessPageProps> = ({
             </div>
           </div>
 
-          {/* Step 2 */}
-          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8 border border-slate-200">
-            <div className="flex items-start gap-4">
-              <span className="w-12 h-12 rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
-                2
-              </span>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Step 2: State League Match Qualification</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Shortlisted players from Phase 1 will advance to the next stage, where they must achieve 100 points to qualify for the knockout matches. Each team will play two matches to earn points, with the following match format:
-                </p>
-                <ol className="list-[lower-alpha] list-inside text-xs sm:text-sm text-slate-700 space-y-1.5 pl-1">
-                  <li><strong>Under-14 &amp; Under-16:</strong> Two 25-over matches per team.</li>
-                  <li><strong>Open / Senior, Leather &amp; Tennis:</strong> Two 20-over matches per team.</li>
-                  <li>Full accommodation, refreshments, and lunch during the match schedule.</li>
-                  <li>Colorful, personalized match jerseys will be provided.</li>
-                  <li>Ball-by-ball digital scoring through Cric Heroes, with individual player performance profiles.</li>
-                  <li>Live streaming on the official CCL YouTube channel.</li>
-                  <li>Live match commentary for an enhanced match-day experience.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8 border border-slate-200">
-            <div className="flex items-start gap-4">
-              <span className="w-12 h-12 rounded-2xl bg-amber-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
-                3
-              </span>
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-slate-900">Step 3: High Performance State Camp</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Top performers enter an intensive conditioning camp. Includes bowling biomechanics screening by PhysicCare, mental toughness drills, match strategy sessions, and guest masterclasses from celebrated ex-Indian cricketers.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 4: Points Rule */}
+          {/* Step 2: Points Rule */}
           <div className="bg-gradient-to-br from-indigo-900 to-slate-950 text-white rounded-2xl p-6 sm:p-8 border border-indigo-700/50 shadow-xl">
             <div className="flex items-start gap-4">
               <span className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 font-black text-lg flex items-center justify-center shrink-0 shadow-md">
-                4
+                2
               </span>
               <div className="space-y-4 flex-1">
                 <div>
-                  <h3 className="text-2xl font-black text-white">Step 4: The 100-Point Selection Rule</h3>
+                  <h3 className="text-2xl font-black text-white">Step 2: The 100-Point Selection Rule</h3>
                   <p className="text-xs sm:text-sm text-indigo-200 mt-1">
                     The bedrock of CCL fairness. No selectors' discretion can override your points tally.
                   </p>
@@ -154,6 +115,45 @@ export const SelectionProcessPage: React.FC<SelectionProcessPageProps> = ({
                     <span>Open Points Simulator</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8 border border-slate-200">
+            <div className="flex items-start gap-4">
+              <span className="w-12 h-12 rounded-2xl bg-amber-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                3
+              </span>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-900">Step 3: High Performance State Camp</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Top performers enter an intensive conditioning camp. Includes bowling biomechanics screening by PhysicCare, mental toughness drills, match strategy sessions, and guest masterclasses from celebrated ex-Indian cricketers.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8 border border-slate-200">
+            <div className="flex items-start gap-4">
+              <span className="w-12 h-12 rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                4
+              </span>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-900">Step 4: State League Match Qualification</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Shortlisted players from Phase 1 will advance to the next stage, where they must achieve 100 points to qualify for the knockout matches. Each team will play two matches to earn points, with the following match format:
+                </p>
+                <ol className="list-[lower-alpha] list-inside text-xs sm:text-sm text-slate-700 space-y-1.5 pl-1">
+                  <li><strong>Under-14 &amp; Under-16:</strong> Two 25-over matches per team.</li>
+                  <li><strong>Open / Senior, Leather &amp; Tennis:</strong> Two 20-over matches per team.</li>
+                  <li>Full accommodation, refreshments, and lunch during the match schedule.</li>
+                  <li>Colorful, personalized match jerseys will be provided.</li>
+                  <li>Ball-by-ball digital scoring through Cric Heroes, with individual player performance profiles.</li>
+                  <li>Live streaming on the official CCL YouTube channel.</li>
+                  <li>Live match commentary for an enhanced match-day experience.</li>
+                </ol>
               </div>
             </div>
           </div>

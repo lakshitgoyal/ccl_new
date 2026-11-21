@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, MessageCircle, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, MapPin, MessageCircle, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { dispatchRealEmailViaApi } from '../../services/notificationService';
 
 export const ContactPage: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formState, setFormState] = useState({
     name: '',
     phone: '',
@@ -12,9 +15,92 @@ export const ContactPage: React.FC = () => {
     message: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    const escapeHtml = (val: string) =>
+      val
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const safeName = escapeHtml(formState.name.trim());
+    const safePhone = escapeHtml(formState.phone.trim());
+    const safeEmail = escapeHtml(formState.email.trim());
+    const safeState = escapeHtml((formState.state || 'Not specified').trim());
+    const safeSubject = escapeHtml(formState.subject.trim());
+    const safeMessage = escapeHtml(formState.message.trim()).replace(/\n/g, '<br/>');
+
+    const textBody = [
+      'NEW WEBSITE INQUIRY — CHAMPION CRICKET LEAGUE (CCL)',
+      '==================================================',
+      `Full Name       : ${formState.name.trim()}`,
+      `Phone / WhatsApp: ${formState.phone.trim()}`,
+      `Email Address   : ${formState.email.trim()}`,
+      `State           : ${(formState.state || 'Not specified').trim()}`,
+      `Subject         : ${formState.subject.trim()}`,
+      `Submitted At    : ${timestamp} IST`,
+      '==================================================',
+      '',
+      'Message:',
+      formState.message.trim(),
+    ].join('\n');
+
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div style="background: #0f172a; color: #ffffff; padding: 20px 24px;">
+          <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #fbbf24; font-weight: bold;">Champion Cricket League • Contact Us</div>
+          <h2 style="margin: 6px 0 0; font-size: 20px;">New Website Inquiry</h2>
+        </div>
+        <div style="padding: 24px; background: #ffffff; color: #1e293b;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr><td style="padding: 8px 0; color: #64748b; width: 150px;"><strong>Full Name</strong></td><td style="padding: 8px 0;">${safeName}</td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;"><strong>Phone / WhatsApp</strong></td><td style="padding: 8px 0;">${safePhone}</td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;"><strong>Email Address</strong></td><td style="padding: 8px 0;"><a href="mailto:${safeEmail}" style="color: #1B3E8E;">${safeEmail}</a></td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;"><strong>State</strong></td><td style="padding: 8px 0;">${safeState}</td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;"><strong>Subject</strong></td><td style="padding: 8px 0;">${safeSubject}</td></tr>
+            <tr><td style="padding: 8px 0; color: #64748b;"><strong>Submitted At</strong></td><td style="padding: 8px 0;">${timestamp} IST</td></tr>
+          </table>
+          <div style="margin-top: 18px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 6px;">Message / Questions</div>
+            <div style="font-size: 14px; line-height: 1.6; color: #0f172a;">${safeMessage}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const result = await dispatchRealEmailViaApi({
+      to: 'support@khelbharatofficial.com',
+      replyTo: formState.email.trim(),
+      subject: `[CCL Inquiry] ${formState.subject.trim()} — ${formState.name.trim()}`,
+      text: textBody,
+      html: htmlBody,
+      isOwnerNotification: false
+    });
+
+    setIsSubmitting(false);
+
+    if (result?.success) {
+      setSubmitted(true);
+      setFormState({
+        name: '',
+        phone: '',
+        email: '',
+        state: 'Delhi',
+        subject: '',
+        message: ''
+      });
+    } else {
+      setSubmitError(
+        result?.error ||
+          'We could not deliver your inquiry right now. Please try again or reach us at support@khelbharatofficial.com / WhatsApp +91 8800763536.'
+      );
+    }
   };
 
   return (
@@ -129,6 +215,13 @@ export const ContactPage: React.FC = () => {
                     Fill out the form below and our regional coordinator will connect with you.
                   </p>
 
+                  {submitError && (
+                    <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -218,10 +311,20 @@ export const ContactPage: React.FC = () => {
 
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-[#1B3E8E] hover:bg-[#142e6b] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-md cursor-pointer"
+                    disabled={isSubmitting}
+                    className="px-6 py-3 bg-[#1B3E8E] hover:bg-[#142e6b] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Submit Inquiry</span>
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Sending Inquiry...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Submit Inquiry</span>
+                      </>
+                    )}
                   </button>
                 </form>
               )}
