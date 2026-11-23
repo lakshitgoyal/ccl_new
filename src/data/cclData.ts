@@ -45,7 +45,7 @@ export const INDIAN_STATES = [
 export const CCL_TRIAL_HUBS_BY_STATE: Record<string, string[]> = {
   'Gujarat': ['Ahmedabad/Vadodara', 'Surat', 'Rajkot'],
   'Delhi NCR': ['Noida/Ghaziabad', 'Gurugram'],
-  'Rajasthan': ['Jodhpur', 'Jaipur', 'Kota'],
+  'Rajasthan': ['Jodhpur', 'Jaipur', 'Kota' , 'Udaipur'],
   'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Bareilly', 'Meerut/Ghaziabad'],
   'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur'],
   'Haryana': ['Rohtak', 'Hisar', 'Karnal/Panipat'],
