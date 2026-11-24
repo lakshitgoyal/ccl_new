@@ -77,26 +77,21 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const pendingEmailSentIdsRef = useRef<Set<string>>(new Set());
   const autoLaunchedResumeIdRef = useRef<string | null>(null);
 
-  const resolvedInitialState = initialState && (CCL_TRIAL_STATES.includes(initialState) || initialState.toLowerCase() === 'delhi')
-    ? (initialState.toLowerCase() === 'delhi' ? 'Delhi NCR' : initialState)
-    : CCL_TRIAL_STATES[0];
-  const initialCities = getCitiesForState(resolvedInitialState);
-  const resolvedInitialCity = initialCity && initialCities.includes(initialCity)
-    ? initialCity
-    : (initialCities[0] || '');
-
-  const [formData, setFormData] = useState<RegistrationFormData>({
+  const createEmptyFormData = (selectedBall: BallType): RegistrationFormData => ({
     name: '',
     age: '',
     phone: '',
     email: '',
-    speciality: 'Batsman',
-    ballType: initialBallType,
-    state: resolvedInitialState,
-    city: resolvedInitialCity,
+    speciality: '',
+    ballType: selectedBall,
+    state: '',
+    city: '',
     referralCode: '',
-    agreedToTerms: true
+    agreedToTerms: false
   });
+
+  const normalizedInitialBall: BallType = initialBallType === 'Tennis' ? 'Tennis' : 'Leather';
+  const [formData, setFormData] = useState<RegistrationFormData>(() => createEmptyFormData(normalizedInitialBall));
 
   const [inputRazorpayKey, setInputRazorpayKey] = useState('');
   const [activeRazorpayKey, setActiveRazorpayKey] = useState('');
@@ -170,28 +165,17 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
     }
 
     setStep('form');
+    setTempRegId('');
     setCheckoutError(null);
-    const stateToUse = initialState && (CCL_TRIAL_STATES.includes(initialState) || initialState.toLowerCase() === 'delhi')
-      ? (initialState.toLowerCase() === 'delhi' ? 'Delhi NCR' : initialState)
-      : (formData.state || CCL_TRIAL_STATES[0]);
-    const cities = getCitiesForState(stateToUse);
-    const cityToUse = initialCity && cities.includes(initialCity) ? initialCity : (cities[0] || '');
-    setBallType(initialBallType);
-    setFormData(prev => ({
-      ...prev,
-      ballType: initialBallType,
-      state: stateToUse,
-      city: cityToUse
-    }));
+    setBallType(normalizedInitialBall);
+    setFormData(createEmptyFormData(normalizedInitialBall));
   }, [isOpen, initialBallType, initialState, initialCity, resumeRegistration]);
 
   const handleStateChange = (selectedState: string) => {
-    const cities = getCitiesForState(selectedState);
-    const newCity = cities.length > 0 ? cities[0] : '';
     setFormData((prev) => ({
       ...prev,
       state: selectedState,
-      city: newCity
+      city: ''
     }));
   };
 
@@ -431,7 +415,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const handleProceedToPay = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.age || !formData.phone.trim() || !formData.email.trim() || !formData.speciality) {
+    if (!formData.name.trim() || !formData.age || !formData.phone.trim() || !formData.email.trim() || !formData.speciality || !formData.state || !formData.city) {
       alert('Please fill out all mandatory fields.');
       return;
     }
@@ -571,7 +555,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </div>
               )}
 
-              <form onSubmit={handleProceedToPay} className="space-y-4">
+              <form onSubmit={handleProceedToPay} autoComplete="off" className="space-y-4">
                 {/* Full Name */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -580,6 +564,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     placeholder="e.g. Rohan Sharma"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -602,6 +587,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       required
                       min="10"
                       max="35"
+                      autoComplete="off"
                       placeholder="e.g. 15"
                       value={formData.age}
                       onChange={(e) => setFormData({ ...formData, age: e.target.value ? parseInt(e.target.value) : '' })}
@@ -617,6 +603,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       type="tel"
                       required
                       pattern="[0-9]{10}"
+                      autoComplete="off"
                       placeholder="10-digit mobile number"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -633,6 +620,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   <input
                     type="email"
                     required
+                    autoComplete="off"
                     placeholder="name@example.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -649,15 +637,25 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Playing Specialty *
                     </label>
-                    <span className="text-xs font-bold text-[#1B3E8E]">
-                      Fee: ₹{calculateRegistrationFee(ballType, formData.speciality)}/-
-                    </span>
+                    {formData.speciality ? (
+                      <span className="text-xs font-bold text-[#1B3E8E]">
+                        Fee: ₹{calculateRegistrationFee(ballType, formData.speciality)}/-
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Select specialty to view fee
+                      </span>
+                    )}
                   </div>
                   <select
+                    required
                     value={formData.speciality}
                     onChange={(e) => setFormData({ ...formData, speciality: e.target.value as PlayerSpeciality })}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white text-slate-900 font-medium"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white font-medium ${
+                      formData.speciality ? 'text-slate-900' : 'text-slate-500'
+                    }`}
                   >
+                    <option value="" disabled>-- Select Playing Specialty --</option>
                     <option value="Batsman">Batsman (₹{calculateRegistrationFee(ballType, 'Batsman')}/-)</option>
                     <option value="Bowler">Bowler (₹{calculateRegistrationFee(ballType, 'Bowler')}/-)</option>
                     <option value="All Rounder">All Rounder (₹{calculateRegistrationFee(ballType, 'All Rounder')}/-)</option>
@@ -672,10 +670,14 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       Trial State *
                     </label>
                     <select
+                      required
                       value={formData.state}
                       onChange={(e) => handleStateChange(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white text-slate-900 font-medium"
+                      className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white font-medium ${
+                        formData.state ? 'text-slate-900' : 'text-slate-500'
+                      }`}
                     >
+                      <option value="" disabled>-- Select Trial State --</option>
                       {CCL_TRIAL_STATES.map((st) => (
                         <option key={st} value={st}>{st}</option>
                       ))}
@@ -688,17 +690,25 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     </label>
                     <select
                       required
+                      disabled={!formData.state}
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white text-slate-900 font-medium"
+                      className={`w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3E8E] bg-white font-medium disabled:bg-slate-100 disabled:cursor-not-allowed ${
+                        formData.city ? 'text-slate-900' : 'text-slate-500'
+                      }`}
                     >
+                      <option value="" disabled>
+                        {formData.state ? '-- Select Trial Hub / City --' : '-- Select Trial State First --'}
+                      </option>
                       {getCitiesForState(formData.state).map((ct) => (
                         <option key={ct} value={ct}>{ct}</option>
                       ))}
                     </select>
-                    <span className="text-[10px] text-slate-500 mt-1 block font-medium">
-                      Official recommended trial hubs for {formData.state}
-                    </span>
+                    {formData.state && (
+                      <span className="text-[10px] text-slate-500 mt-1 block font-medium">
+                        Official recommended trial hubs for {formData.state}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -709,6 +719,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   </label>
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="Leave blank if not applicable"
                     value={formData.referralCode}
                     onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
@@ -828,11 +839,13 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                         Trial Registration Fee:
                       </span>
                       <span className="text-xl font-black text-[#1B3E8E]">
-                        ₹{calculateRegistrationFee(ballType, formData.speciality).toLocaleString('en-IN')}/-
+                        {formData.speciality
+                          ? `₹${calculateRegistrationFee(ballType, formData.speciality).toLocaleString('en-IN')}/-`
+                          : '—'}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      {ballType} Ball Trial • {formData.speciality} • Season 2 Official Registration (GST included)
+                      {ballType} Ball Trial{formData.speciality ? ` • ${formData.speciality}` : ''} • Season 2 Official Registration (GST included)
                     </p>
                   </div>
                   <button
@@ -847,7 +860,11 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({
                       </>
                     ) : (
                       <>
-                        <span>Proceed to Pay ₹{calculateRegistrationFee(ballType, formData.speciality).toLocaleString('en-IN')}</span>
+                        <span>
+                          {formData.speciality
+                            ? `Proceed to Pay ₹${calculateRegistrationFee(ballType, formData.speciality).toLocaleString('en-IN')}`
+                            : 'Proceed to Pay'}
+                        </span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

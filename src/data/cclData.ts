@@ -45,7 +45,7 @@ export const INDIAN_STATES = [
 export const CCL_TRIAL_HUBS_BY_STATE: Record<string, string[]> = {
   'Gujarat': ['Ahmedabad/Vadodara', 'Surat', 'Rajkot'],
   'Delhi NCR': ['Noida/Ghaziabad', 'Gurugram'],
-  'Rajasthan': ['Jodhpur', 'Jaipur', 'Kota' , 'Udaipur'],
+  'Rajasthan': ['Jodhpur', 'Jaipur', 'Kota', 'Udaipur'],
   'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Bareilly', 'Meerut/Ghaziabad'],
   'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur'],
   'Haryana': ['Rohtak', 'Hisar', 'Karnal/Panipat'],
@@ -63,7 +63,7 @@ export const CCL_TRIAL_HUBS_BY_STATE: Record<string, string[]> = {
 export const CCL_TRIAL_STATES = Object.keys(CCL_TRIAL_HUBS_BY_STATE);
 
 export const getCitiesForState = (stateName: string): string[] => {
-  if (!stateName) return CCL_TRIAL_HUBS_BY_STATE['Delhi NCR'];
+  if (!stateName) return [];
   if (CCL_TRIAL_HUBS_BY_STATE[stateName]) {
     return CCL_TRIAL_HUBS_BY_STATE[stateName];
   }
@@ -73,7 +73,7 @@ export const getCitiesForState = (stateName: string): string[] => {
   const match = Object.keys(CCL_TRIAL_HUBS_BY_STATE).find(
     (k) => k.toLowerCase() === stateName.toLowerCase()
   );
-  return match ? CCL_TRIAL_HUBS_BY_STATE[match] : CCL_TRIAL_HUBS_BY_STATE['Delhi NCR'];
+  return match ? CCL_TRIAL_HUBS_BY_STATE[match] : [];
 };
 
 export const FEE_STRUCTURE = {
